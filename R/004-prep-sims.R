@@ -30,85 +30,92 @@ library(tictoc)
 source(here_r("002-define-helpers.R"))
 grid     <- terra::rast(here_input("grid.tif"))
 arrays   <- readRDS(here_input("arrays.rds"))
-alg_pars <- readRDS(here_input("alg_pars.rds"))
+sims     <- readRDS(here_input("sims.rds"))
 
 
 #########################
 #########################
 #### Prepare AC* inputs
 
-#### Clean directories
+#### Isolate detection parameters
+det_pars_all <-
+  sims |>
+  select(array_type, array_realisation, alpha, beta, gamma) |>
+  distinct() |>
+  as.data.table()
+
+#### Define directories
+# Clean directories
 if (FALSE) {
   tic()
   unlink(here_input("ac"), recursive = TRUE)
   toc()
 }
+# Define folders
+# * ac/{array_type}/{array_realisation}/{gamma}/overlaps.rds
+# * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.rds
+pbapply::pbsapply(split(det_pars_all, seq_len(nrow(det_pars_all))), function(d) {
+  dir.create(here_input("ac", d$array_type, d$array_realisation,
+                        d$gamma, d$alpha, d$beta),
+             recursive = TRUE)
+}) |> invisible()
 
-#### Define detection parameters
-# Collect all unique parameter combinations (alpha, beta, gamma)
-det_pars_all <-
-  alg_pars |>
-  # purrr::flatten() |>
-  rbindlist() |>
-  dplyr::select(alpha, beta, gamma) |>
+#### Define detection overlaps (2 hr 10 using 10 cl)
+# Define gamma parameters (for each array)
+gc()
+gammas <-
+  det_pars_all |>
+  select(array_type, array_realisation, gamma) |>
   distinct() |>
   as.data.table()
-# Isolate unique gamma values
-gammas <- sort(unique(det_pars_all$gamma))
-sapply(gammas, \(.gamma) dir.create(here_input("ac", .gamma)))
-
-#### Build detection containers, overlaps and containers (~7 mins)
-# This code writes AC inputs to file:
-# * ac/{gamma}/overlaps.rds
-# * ac/{gamma}/{alpha}/{beta}/kernels.rds (required unwrapping)
-# (optional) TO DO
-# * Improve monitoring of function progress here
-dir.create(here_input("ac"))
 tic()
-ac_pars <-
-  lapply(arrays, function(.arrays) {
-    lapply(split(.arrays, .arrays$array_id), function(.array) {
-      objs <-
-        lapply(gammas, function(.gamma) {
+pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
+  # Isolate array data
+  # d = split(gammas, seq_len(nrow(gammas)))[[1]]
+  out_file <- here_input("ac", d$array_type, d$array_realisation, d$gamma, "overlaps.rds")
+  if (!file.exists(out_file)) {
+    array <-
+      arrays[[d$array_type]] |>
+      filter(array_id == d$array_realisation) |>
+      mutate(receiver_range = d$gamma) |>
+      as.data.table()
+    # Define detection containers
+    containers <- acs_setup_detection_containers(grid, array)
+    # Define overlaps & save
+    overlaps   <- acs_setup_detection_overlaps(containers, array)
+    saveRDS(overlaps, out_file)
+    TRUE
+  }
+}) |> invisible()
+toc()
 
-          ##### Define array & gamma-specific objects (containers, overlaps)
-          .array$receiver_range <- .gamma
-          containers <- acs_setup_detection_containers(grid, .array)
-          overlaps   <- acs_setup_detection_overlaps(containers, .array)
-          saveRDS(overlaps, here_input("ac", .gamma, "overlaps.rds"))
-
-          #### Define array and alpha, beta, gamma-specific objects (kernels)
-          # Define unique alpha/beta/gamma combinations
-          ab <-
-            det_pars_all |>
-            filter(gamma == .gamma) |>
-            distinct() |>
-            as.data.table()
-          # Define a list of kernels, by alpha/beta (and gamma) combination
-          kernels <-
-            lapply(split(ab, seq_len(nrow(ab))), function(.ab) {
-              dir.create(here_input("ac", .gamma, .ab$alpha, .ab$beta),
-                         recursive = TRUE)
-              k <- acs_setup_detection_kernels(.array,
-                                               .bathy = grid,
-                                               .calc_detection_pr = acs_setup_detection_pr,
-                                               .alpha = .ab$alpha, .beta = .ab$beta, .gamma = .ab$gamma,
-                                               .verbose = FALSE)
-              k <- wrapr(k)
-              saveRDS(k, here_input("ac", .gamma, .ab$alpha, .ab$beta, "kernels.rds"))
-              NULL
-            })
-          names(kernels) <- paste(ab$alpha, ab$beta)
-
-          #### Return outputs
-          # list(overlaps = overlaps, kernels = kernels)
-          NULL
-
-        })
-      names(objs) <- gammas
-      objs
-    })
-  })
+#### Define detection containers
+gc()
+tic()
+pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
+  # Define array data
+  out_file <- here_input("ac", d$array_type, d$array_realisation,
+                         d$gamma, d$alpha, d$beta, "kernels.rds")
+  if (!file.exists(out_file)) {
+    array <-
+      arrays[[d$array_type]] |>
+      filter(array_id == d$array_realisation) |>
+      mutate(receiver_range = d$gamma) |>
+      as.data.table()
+    # Read overlaps
+    overlaps <- readRDS(here_input("ac", d$array_type, d$array_realisation,
+                                   d$gamma, "overlaps.rds"))
+    # Define detection containers & save
+    kernels <- acs_setup_detection_kernels(array,
+                                           .bathy = grid,
+                                           .calc_detection_pr = acs_setup_detection_pr,
+                                           .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
+                                           .verbose = FALSE)
+    kernels <- wrapr(kernels)
+    saveRDS(kernels, out_file)
+  }
+  TRUE
+}) |> invisible()
 toc()
 
 
