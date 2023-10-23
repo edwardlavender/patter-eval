@@ -61,6 +61,8 @@ sapply(gammas, \(.gamma) dir.create(here_input("ac", .gamma)))
 # This code writes AC inputs to file:
 # * ac/{gamma}/overlaps.rds
 # * ac/{gamma}/{alpha}/{beta}/kernels.rds (required unwrapping)
+# (optional) TO DO
+# * Improve monitoring of function progress here
 dir.create(here_input("ac"))
 tic()
 ac_pars <-
