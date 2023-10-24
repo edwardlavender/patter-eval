@@ -78,7 +78,7 @@ workflow <- function(
   }
   if (nrow(acoustics) <= 5L) {
     cat("> Insufficient detections to proceed: ending simulation.\n")
-    return(NULL)
+    return("Failure: insufficient detections")
   }
   # Revise path (focus on portion between first & last detections)
   path <-
@@ -88,7 +88,7 @@ workflow <- function(
     as.data.table()
   if (nrow(path) <= 5L) {
     cat("> Insufficient path points to proceed: ending simulation.\n")
-    return(NULL)
+    return("Failure: insufficient path")
   }
 
   #### Define array-level algorithm inputs
@@ -199,7 +199,7 @@ workflow <- function(
     error = function(e) e)
   if (inherits(out_ac, "error")) {
     cat(paste("\t AC algorithm failed with error:", out_ac, "\n"))
-    return(NULL)
+    return("Failure: AC convergence")
   }
 
   #### Implement PF
@@ -218,7 +218,7 @@ workflow <- function(
                         .verbose = FALSE)
   if (!inherits(out_pff, "pf")) {
     cat("\t \t > Convergence failure: ending simulation.\n")
-    return(NULL)
+    return("Failure: ACPF convergence")
   }
   t2_ac_pff <- Sys.time()
 
@@ -298,8 +298,8 @@ workflow <- function(
   saveRDS(time, here_output("time", paste0(sim$id, ".rds")))
 
 
-  #### Return NULL
-  NULL
+  #### Return outputs
+  "success"
 }
 
 

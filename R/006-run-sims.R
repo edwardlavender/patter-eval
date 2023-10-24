@@ -46,15 +46,20 @@ sims       <- readRDS(here_input("sims.rds"))
 #### Implement simulations
 
 #### (optional) Use a subset of data for testing
-sims <- sims[which(sims$performance)[1:3], ]
+# sims <- sims[which(sims$performance)[1:3], ]
 
 #### Set up cluster
-grid <- terra::wrap(grid)
-cl <- NULL
-workers <- 2L
-if (.Platform$OS.type == "unix") {
+# Wrap grid
+grid        <- terra::wrap(grid)
+# Define number of workers
+workers     <- 4L
+# Select forking or sockets
+# * sockets give more informative error messages (but may be slower)
+# * ?flapper::`flapper-tips-parallel`
+use_forking <- FALSE
+if (use_forking && .Platform$OS.type == "unix") {
   cl <- workers
-} else if (.Platform$OS.type == "windows") {
+} else {
   cl <- parallel::makeCluster(workers)
   parallel::clusterEvalQ(cl, {
     library(patter)
@@ -73,7 +78,8 @@ if (.Platform$OS.type == "unix") {
 #### Run simulations
 # (optional) TO DO
 # * Define chunks to loop over in parallel & create a log file for each chunk
-pbapply::pblapply(split(sims, seq_len(nrow(sims))), cl = cl, function(sim) {
+success <-
+  pbapply::pblapply(split(sims, seq_len(nrow(sims))), cl = cl, function(sim) {
 
   # Run sim function
   # sim <- sims[1, ]
@@ -107,6 +113,12 @@ pbapply::pblapply(split(sims, seq_len(nrow(sims))), cl = cl, function(sim) {
   success
 
 }) |> invisible()
+patter::cl_stop(cl)
+
+#### Check success
+sims$success <- unlist(success)
+saveRDS(sims, here_output("sims-completed.rds"))
+table(sims$success)
 
 
 #### End of code.
