@@ -18,6 +18,7 @@
 workflow <- function(
     # input datasets
     sim,
+    grid,
     paths,
     detections,
     seed,
@@ -30,7 +31,9 @@ workflow <- function(
     here_output,
     here_alg,
     pf_coords,
-    skill_by_alg
+    skill_by_alg,
+    # misc
+    test
     ) {
 
 
@@ -50,6 +53,9 @@ workflow <- function(
   cat(paste0(Sys.time(), "\n"))
   print(sim)
 
+  #### Define grid
+  grid <- terra::unwrap(grid)
+
   #### Define path (& realisation, if necessary)
   cat("* Data preparation...\n")
   path <-
@@ -67,6 +73,9 @@ workflow <- function(
     filter(array_id == sim$array_realisation) |>
     filter(path_id == sim$path_type) |>
     as.data.table()
+  if (test) {
+    acoustics <- acoustics[1:10, ]
+  }
   if (nrow(acoustics) <= 5L) {
     cat("> Insufficient detections to proceed: ending simulation.\n")
     return(NULL)
@@ -84,10 +93,11 @@ workflow <- function(
 
   #### Define array-level algorithm inputs
   overlaps   <-
-    here_input("ac", sim$gamma, "overlaps.rds") |>
+    here_input("ac", sim$array_type, sim$array_realisation, sim$gamma, "overlaps.rds") |>
     readRDS()
   kernels    <-
-    here_input("ac", sim$gamma, sim$alpha, sim$beta, "kernels.rds") |>
+    here_input("ac", sim$array_type, sim$array_realisation, sim$gamma,
+               sim$alpha, sim$beta, "kernels.rds") |>
     readRDS() |>
     unwrapr()
 
@@ -133,7 +143,7 @@ workflow <- function(
       out_coa <- coa(acoustics,
                      .delta_t = .dt,
                      .plot_weights = FALSE)
-      ud_coa  <- pf_dens(grid,
+      ud_coa  <- pf_dens(.xpf = grid,
                          .coord = out_coa[, .(x = coa_x, y = coa_y)],
                          .plot = FALSE,
                          .verbose = FALSE,
@@ -188,13 +198,13 @@ workflow <- function(
         .verbose = FALSE),
     error = function(e) e)
   if (inherits(out_ac, "error")) {
-    cat(paste("\t AC algorithm failed with error:", out_ac))
+    cat(paste("\t AC algorithm failed with error:", out_ac, "\n"))
     return(NULL)
   }
 
   #### Implement PF
   # Run forward simulation
-  print("\t > Forward simulation...")
+  cat("\t > Forward simulation...\n")
   t1_ac_pff <- Sys.time()
   set.seed(seed)
   out_pff <- pf_forward(obs,
@@ -207,13 +217,13 @@ workflow <- function(
                         .save_history = TRUE,
                         .verbose = FALSE)
   if (!inherits(out_pff, "pf")) {
-    print("\t \t > Convergence failure: ending simulation.")
+    cat("\t \t > Convergence failure: ending simulation.\n")
     return(NULL)
   }
   t2_ac_pff <- Sys.time()
 
   # Run backward pass
-  print("\t > Backward simulation...")
+  cat("\t > Backward simulation...\n")
   t1_ac_pfb <- Sys.time()
   out_pfb <- pf_backward(out_pff$history,
                          .save_history = TRUE,
@@ -221,9 +231,9 @@ workflow <- function(
   t2_ac_pfb <- Sys.time()
   # Implement smoothing
   t1_ac_ud <- Sys.time()
-  print("\t > Smoothing...")
-  out_pfp <- pf_coords(out_pfb$history)
-  ud_acpf <- pf_dens(grid,
+  cat("\t > Smoothing...\n")
+  out_pfp <- pf_coords(out_pfb$history, grid)
+  ud_acpf <- pf_dens(.xpf = grid,
                      .coord = out_pfp,
                      .plot = FALSE,
                      .verbose = FALSE,
@@ -248,7 +258,7 @@ workflow <- function(
   #### Calculate skill
 
   #### Define template data.table
-  cat("* Model skill...")
+  cat("* Model skill...\n")
   skill <- data.table(
     id = sim$id,
     performance = sim$performance,
@@ -278,13 +288,13 @@ workflow <- function(
   saveRDS(skill, here_output("skill", paste0(sim$id, ".rds")))
 
   #### Record wall time
-  cat("* Wall time...")
+  cat("* Wall time...\n")
   t_end <- Sys.time()
   time <- data.table(id = sim$id,
                      ac_pff = mins(t2_ac_pff, t1_ac_pff),
                      ac_pfb = mins(t2_ac_pfb, t1_ac_pfb),
                      ac_ud = mins(t2_ac_ud, t1_ac_ud),
-                     script_dur = mins(t_end, t_onset, units = "mins"))
+                     script_dur = mins(t_end, t_onset))
   saveRDS(time, here_output("time", paste0(sim$id, ".rds")))
 
 
