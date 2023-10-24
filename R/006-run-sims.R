@@ -48,7 +48,12 @@ sims       <- readRDS(here_input("sims.rds"))
 #### Implement simulations
 
 #### (optional) Use a subset of data for testing
-# sims <- sims[which(sims$performance)[1:3], ]
+test <- TRUE
+if (test) {
+  # sims <- sims[which(sims$performance)[1:3], ]
+  sims <- sims[which(sims$performance), ]
+  sims
+}
 
 #### Set up cluster
 # Wrap grid
@@ -74,7 +79,8 @@ if (use_forking && .Platform$OS.type == "unix") {
                                       "grid", "paths", "detections", "seed",
                                       "unwrapr", "mins",
                                       "here_input", "here_output", "here_alg",
-                                      "pf_coords", "skill_by_alg"))
+                                      "pf_coords", "skill_by_alg",
+                                      "test"))
 }
 
 #### Run simulations
@@ -102,7 +108,7 @@ success <-
     here_alg = here_alg,
     pf_coords = pf_coords,
     skill_by_alg = skill_by_alg,
-    test = TRUE
+    test = test
   )
 
   '
