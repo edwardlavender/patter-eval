@@ -82,15 +82,15 @@ get_ud_patter <- function(sim,
                      pff = mins(t2_pff, t1_pff),
                      pfb = mins(t2_pfb, t1_pfb),
                      ud = mins(t2_ud, t1_ud))
-  qs::qsave(time, here_alg(sim, "patter", folder, "time.qs"))
+  qs::qsave(time, here_alg(sim, "patter", folder, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
-  qs::qsave(out_pfb, here_alg(sim, "patter", folder, "particles.qs"))
+  qs::qsave(out_pfb, here_alg(sim, "patter", folder, sim$alg_par, "particles.qs"))
   # UD
-  write_rast(ud_acpf, here_alg(sim, "patter", folder, "ud.tif"))
+  write_rast(ud_acpf, here_alg(sim, "patter", folder, sim$alg_par, "ud.tif"))
   return(1)
 }
 
 update_ac <- function(.particles, .bathy, .obs, .t, ...) {
   .particles$bathy <- terra::extract(.bathy, as.matrix(.particles[, c("x_now", "y_now")]))
-  (.particles$bathy  >= .obs$depth_shallow[.t] & .particles$bathy <= .obs$depth_deep[.t]) + 0
+  (.particles$bathy >= .obs$depth_shallow[.t] & .particles$bathy <= .obs$depth_deep[.t]) + 0
 }
