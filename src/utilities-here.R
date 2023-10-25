@@ -9,6 +9,7 @@ here_output <- function(...) {
 }
 
 here_alg <- function(sim, ...) {
-  here_output(sim$combination, sim$array_type, sim$array_realisation,
+  here_output("runs",
+              sim$combination, sim$array_type, sim$array_realisation,
               sim$path_realisation, ...)
 }

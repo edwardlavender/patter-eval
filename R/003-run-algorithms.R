@@ -40,7 +40,6 @@ sims       <- readRDS(here_input("sims.rds"))
 #########################
 #### Generic preparation
 
-#### (optional) Set up cluster
 grid <- terra::wrap(grid)
 
 
@@ -64,15 +63,21 @@ sims_for_performance <-
 sims_for_performance_ls <-
   split(sims_for_performance, seq_len(nrow(sims_for_performance)))
 
-#### Path UDs (~3 mins, one core)
-pbapply::pblapply(sims_for_performance_ls, function(sim) {
+#### Path UDs
+# * ~3 mins, cl = 1L
+# * ~40 s, cl = 10L forks
+gc()
+pbapply::pblapply(sims_for_performance_ls, cl = 10L, function(sim) {
   # sim <- sims_for_performance_ls[[1]]
   grid <- terra::unwrap(grid)
   workflow_path(sim, grid)
 }) |> invisible()
 
-#### COA UDs (~3 mins, one core)
-pbapply::pblapply(sims_for_performance_ls, function(sim) {
+#### COA UDs
+# * ~3 mins, cl = 1L
+# * ~40 s, cl = 10L forks
+gc()
+pbapply::pblapply(sims_for_performance_ls, cl = 10L, function(sim) {
   # sim <- sims_for_performance_ls[[1]]
   grid <- terra::unwrap(grid)
   workflow_coa(sim, grid)
@@ -85,6 +90,8 @@ pbapply::pblapply(sims_for_performance_ls, function(sim) {
 s <- sims_for_performance_ls[[2]]
 here_alg(s, "path", "ud.tif")  |> terra_qplot()
 here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
+m <- read_array(s)
+points(m$receiver_easting, m$receiver_northing)
 
 
 #########################
@@ -94,20 +101,46 @@ here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
 #### Overview
 # Here, {patter} workflows are implemented (for both performance & sensitivity simulations)
 
+#### Set up cluster
+# Number of forks
+cl <- 2L
+# Define chunks to iterate over in parallel
+chunks <- cl_chunks(cl, nrow(sims))
+# Creare a log file for each chunk
+lapply(seq_len(cl), function(i) {
+  file.create(here_output("logs", paste0("log-", i, ".txt")))
+}) |> invisible()
+
 #### Time trials
 # Estimated duration (days) on {cl} CPUs, assuming simulations take {guess} seconds
-cl    <- 10L
 guess <- 30 # 30 s
 (nrow(sims) * 30)/60/60/24/cl
 
-pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(sim) {
-  # sim <- sims[1, ]
-  tic()
-  grid <- terra::unwrap(grid)
-  workflow_patter(sim, grid)
-  toc()
-}) |> invisible()
-
+#### Implementation
+gc()
+success <-
+  pbapply::pblapply(1, cl = NULL, function(i) {
+    sink(here_output("logs", paste0("log-", i, ".txt")))
+    cat(paste("CHUNK" , i, "\n"))
+    t1_chunk <- Sys.time()
+    cat(paste("Start:", as.character(t1_chunk), "\n"))
+    grid <- terra::unwrap(grid)
+    sims_for_chunk <- sims[chunks[[i]], ]
+    success <-
+      lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk)))[1:5], function(sim) {
+        cat(paste0("\n", sim$id, ":\n"))
+        t1 <- Sys.time()
+        workflow_patter(sim, grid)
+        t2 <- Sys.time()
+        cat(as.numeric(difftime(t2, t1, units = "secs")))
+      }) |> unlist()
+    t2_chunk <- Sys.time()
+    cat("\n\n")
+    cat(paste("End:", as.character(t2_chunk), "\n"))
+    cat(paste("Duration:", round(difftime(t2_chunk, t1_chunk, units = "hours"), 2), "hours."))
+    sink()
+    success
+  }) |> unlist()
 
 
 #### End of code.

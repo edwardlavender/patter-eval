@@ -1,9 +1,7 @@
 #' @title UD functions
 
 get_ud_path <- function(sim, grid, path, sigma = spatstat.explore::bw.diggle) {
-  out_file <- here_output(sim$combination,
-                          sim$array_type, sim$array_realisation, sim$path_realisation,
-                          "path", "ud.tif")
+  out_file <- here_alg(sim, "path", "ud.tif")
   ud_path <-
     pf_dens(.xpf = grid,
             .coord = path[, .(x, y)],
@@ -15,9 +13,7 @@ get_ud_path <- function(sim, grid, path, sigma = spatstat.explore::bw.diggle) {
 }
 
 get_ud_coa <- function(sim, grid, acoustics, delta_t, sigma = spatstat.explore::bw.diggle) {
-  out_file <- here_output(sim$combination,
-                          sim$array_type, sim$array_realisation, sim$path_realisation,
-                          "coa", delta_t, "ud.tif")
+  out_file <- here_alg(sim, "coa", delta_t, "ud.tif")
   if (difftime(max(acoustics$timestamp), min(acoustics$timestamp), units = "mins") <= delta_t) {
     return(NULL)
   }
@@ -50,6 +46,7 @@ get_ud_patter <- function(sim,
                           .moorings = array,
                           .detection_overlaps = overlaps,
                           .detection_kernels = kernels,
+                          .update_ac = update_ac,
                           .kick = pf_kick,
                           .shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility,
                           .rho = sim$rho, .sd = sim$sd,
@@ -69,7 +66,7 @@ get_ud_patter <- function(sim,
   t2_pfb <- Sys.time()
 
   #### Smoothing
-  t1_ud <- Sys.time()
+  t1_ud   <- Sys.time()
   out_pfp <- pf_coords(out_pfb$history, grid)
   ud_acpf <- pf_dens(.xpf = grid,
                      .coord = out_pfp,
@@ -86,6 +83,8 @@ get_ud_patter <- function(sim,
                      pfb = mins(t2_pfb, t1_pfb),
                      ud = mins(t2_ud, t1_ud))
   qs::qsave(time, here_alg(sim, "patter", folder, "time.qs"))
+  # Particle samples (for checks)
+  qs::qsave(out_pfb, here_alg(sim, "patter", folder, "particles.qs"))
   # UD
   write_rast(ud_acpf, here_alg(sim, "patter", folder, "ud.tif"))
   return(1)

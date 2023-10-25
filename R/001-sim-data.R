@@ -42,7 +42,7 @@ grid <- rast_template(.res = 5,
                       .xmin = 0, .xmax = 1e4,
                       .ymin = 0, .ymax = 1e4,
                       .crs = "+proj=utm +zone=1 +datum=WGS84")
-# Simulate depths
+# Generate hypothetical bathymetry values
 g <- terra::as.data.frame(grid, xy = TRUE)
 g$depth <- gen_depth(g)
 grid <- terra::rasterize(as.matrix(g[, c("x", "y")]),
@@ -54,8 +54,11 @@ ext <- terra::ext(grid)
 terra::ncell(grid)
 
 #### Define study period
-n_steps <- 1440
-step   <- "2 mins"
+# Define number of days
+n_days  <- 2
+# Define number to two minute time steps in n_days
+step    <- "2 mins"
+n_steps <- 60/2*24 * n_days
 period  <- seq.POSIXt(as.POSIXct("2023-01-01", tz = "UTC"),
                       length.out = n_steps,
                       by = step)
@@ -440,7 +443,6 @@ nrow(sims)
 sims$performance <- FALSE
 true_pars <- cbind(detection_pars, path_pars, alg_controls)
 for (i in seq_len(nrow(true_pars))) {
-  # TO DO- include step, n_particles etc.
   p <- true_pars[i, ]
   pos <- which(
     sims$alpha == p$alpha &

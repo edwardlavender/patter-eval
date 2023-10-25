@@ -1,6 +1,14 @@
 
 #' @title Read/write SpatRasters
 
+read_rast <- function(x) {
+  if (file.exists(x)) {
+    terra::rast(x)
+  } else {
+    NULL
+  }
+}
+
 write_rast <- function(x, filename, overwrite = TRUE) {
   if (!is.null(x)) {
     terra::writeRaster(x, filename, overwrite = overwrite)
