@@ -24,6 +24,7 @@ workflow_patter <- function(sim, grid) {
   overlaps  <- read_overlaps(sim)
   kernels   <- read_kernels(sim)
   # Algorithm preparation
+  # * Note that sim$mobility has been adjusted for grid resolution (see sim-data.R)
   obs <- acs_setup_obs(acoustics,
                        .archival = path,
                        .step = paste(sim$step, "mins"),
