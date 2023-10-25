@@ -74,12 +74,9 @@ follows:
 
 3.  **`R/`** contains scripts for data processing and analysis:
 
-    - `define_global_param.R` defines global parameters;
-    - `define_helpers.R` defines helper functions;
     - `sim-data.R` simulates ‘observations’;
-    - `prep-sims.R` prepares simulation inputs;
-    - `worflow.R` implements the simulation workflow;
-    - `run-sims.R` implements all simulations, using `workflow.R`;
+    - `prep-algorithms-prep.R` prepares for algorithm runs;
+    - `run-algorithms.R` runs the algorithms using simulated datasets;
     - `analyse-performance.R` compares algorithm performance;
     - `analyse-sensitivity.R` analyses algorithm sensitivity to
       parameter mis-specification;
@@ -87,16 +84,18 @@ follows:
       approximation;
     - `analyse-timing.R` analyses wall time; <br/>
 
-4.  **`dev/`** contains project-management scripts.
+4.  **`src/`** contains helper (`R`) functions.
+
+5.  **`dev/`** contains project-management scripts.
 
     - `01-dev.R` and `02-clone.R` are standard
       [`dv`](https://github.com/edwardlavender/dv) scripts:
       - `01-dev.R` records project set up and development;
       - `02-clone.R` is used to clone the project (see ‘Instructions’);
 
-5.  **`fig/`** contains figures.
+6.  **`fig/`** contains figures.
 
-6.  **`doc/`** contains supporting documents.
+7.  **`doc/`** contains supporting documents.
 
 Note that the `data-raw/`, `data/` (except `data/inst/`) and `fig/`
 directories are not provided in the online version of this repository.

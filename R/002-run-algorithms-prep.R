@@ -1,6 +1,6 @@
 #########################
 #########################
-#### prep-workflows.R
+#### run-algorithms-prep.R
 
 #### Aims:
 # (1) Prepare for algorithm implementations
