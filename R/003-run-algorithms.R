@@ -117,6 +117,11 @@ guess <- 30 # 30 s
 (nrow(sims) * 30)/60/60/24/cl
 
 #### Implementation
+
+# Performance
+# * All performance simulations should converge!
+# sims <- sims_for_performance
+
 gc()
 success <-
   pbapply::pblapply(1, cl = NULL, function(i) {
@@ -141,6 +146,28 @@ success <-
     sink()
     success
   }) |> unlist()
+
+
+#########################
+#########################
+#### Quick visuals
+
+qplot <- function(file) {
+  terra_qplot(file)
+  p <- read_path(sim)
+  prettyGraphics::add_sp_path(p$x, p$y, length = 0)
+  m <- read_array(sim)
+  points(m$receiver_easting, m$receiver_northing)
+}
+
+sim <- sims[4, ]
+
+pp <- par(mfrow = c(2, 2))
+qplot(here_alg(sim, "path", "ud.tif"))
+qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
+qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud.tif"))
+qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud.tif"))
+par(pp)
 
 
 #### End of code.
