@@ -28,10 +28,8 @@ workflow_patter <- function(sim, grid) {
                        .archival = path,
                        .step = paste(sim$step, "mins"),
                        .mobility = sim$mobility)
-  if (!is.null(update_ac)) {
-    obs[, depth_shallow := obs$depth - 5]
-    obs[, depth_deep := obs$depth + 5]
-  }
+  obs[, depth_shallow := obs$depth - 5]
+  obs[, depth_deep := obs$depth + 5]
   # ACPF algorithm
   get_ud_patter(sim = sim,
                 obs = obs, grid = grid,
