@@ -3,7 +3,7 @@
 #### sim-data.R
 
 #### Aims
-# 1) Simulate data
+# 1) Simulate datasets for analysis
 
 #### Prerequisites
 # 1) NA
@@ -26,10 +26,10 @@ library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(prettyGraphics)
 library(tictoc)
+sapply(list.files(here_src(), full.names = TRUE), source)
 
 #### Load data
-source(here_r("001-define-global-param.R"))
-source(here_r("002-define-helpers.R"))
+seed <- 1L
 
 
 #########################
@@ -486,37 +486,6 @@ nrow(sims)
 
 #### Save sims
 saveRDS(sims, here_input("sims.rds"))
-
-
-#########################
-#########################
-#### Prepare directories
-
-#### (optional) Clean up directories
-if (FALSE) {
-  tic()
-  unlink(here_data("sims", "output"), recursive = TRUE)
-  toc()
-}
-
-#### Create directories (~10 s)
-# * One folder for each simulation
-# * Sub folders for path (truth) & algorithms (e.g., coa)
-dir.create(here_data("sims", "output", "log"), recursive = TRUE)
-dir.create(here_data("sims", "output", "algorithm"), recursive = TRUE)
-dir.create(here_data("sims", "output", "skill"), recursive = TRUE)
-pbapply::pblapply(sims$id, cl = 10L, \(id) {
-  con <- here_data("sims", "output", "algorithm", id)
-  dir.create(con)
-  dir.create(file.path(con, "path"))
-  dir.create(file.path(con, "coa"))
-  dir.create(file.path(con, "coa", "30 mins"))
-  dir.create(file.path(con, "coa", "120 mins"))
-  dir.create(file.path(con, "rsp"))
-  dir.create(file.path(con, "patter"))
-  dir.create(file.path(con, "patter", "acpf"))
-}) |>
-  invisible()
 
 
 #### End of code.

@@ -25,9 +25,9 @@ library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(tictoc)
+sapply(list.files(here::here("src"), full.names = TRUE), source)
 
 #### Load data
-source(here_r("002-define-helpers.R"))
 sims <- readRDS(here_input("sims.rds"))
 
 
