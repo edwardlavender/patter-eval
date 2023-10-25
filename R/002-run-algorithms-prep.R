@@ -64,7 +64,7 @@ sims_for_realisations <-
   sims |>
   group_by(combination,
            array_type, array_realisation,
-           path_type, path_realisation) |>
+           path_realisation) |>
   slice(1L) |>
   as.data.table()
 sims_for_realisations_ls <- split(sims_for_realisations, seq_len(nrow(sims_for_realisations)))
@@ -115,8 +115,8 @@ if (FALSE) {
   toc()
 }
 # Define folders
-# * ac/{array_type}/{array_realisation}/{gamma}/overlaps.rds
-# * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.rds
+# * ac/{array_type}/{array_realisation}/{gamma}/overlaps.qs
+# * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.qs
 pbapply::pbsapply(split(det_pars_all, seq_len(nrow(det_pars_all))), function(d) {
   dir.create(here_input("ac", d$array_type, d$array_realisation,
                         d$gamma, d$alpha, d$beta),
@@ -135,7 +135,7 @@ tic()
 pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
   # Isolate array data
   # d = split(gammas, seq_len(nrow(gammas)))[[1]]
-  out_file <- here_input("ac", d$array_type, d$array_realisation, d$gamma, "overlaps.rds")
+  out_file <- here_input("ac", d$array_type, d$array_realisation, d$gamma, "overlaps.qs")
   if (!file.exists(out_file)) {
     array <-
       arrays[[d$array_type]] |>
@@ -146,7 +146,7 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
     containers <- acs_setup_detection_containers(grid, array)
     # Define overlaps & save
     overlaps   <- acs_setup_detection_overlaps(containers, array)
-    saveRDS(overlaps, out_file)
+    qs::qsave(overlaps, out_file)
     TRUE
   }
 }) |> invisible()
@@ -158,7 +158,7 @@ tic()
 pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
   # Define array data
   out_file <- here_input("ac", d$array_type, d$array_realisation,
-                         d$gamma, d$alpha, d$beta, "kernels.rds")
+                         d$gamma, d$alpha, d$beta, "kernels.qs")
   if (!file.exists(out_file)) {
     array <-
       arrays[[d$array_type]] |>
@@ -166,8 +166,8 @@ pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, fu
       mutate(receiver_range = d$gamma) |>
       as.data.table()
     # Read overlaps
-    overlaps <- readRDS(here_input("ac", d$array_type, d$array_realisation,
-                                   d$gamma, "overlaps.rds"))
+    overlaps <- qs::qread(here_input("ac", d$array_type, d$array_realisation,
+                                   d$gamma, "overlaps.qs"))
     # Define detection containers & save
     kernels <- acs_setup_detection_kernels(array,
                                            .bathy = grid,
@@ -175,7 +175,7 @@ pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, fu
                                            .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
                                            .verbose = FALSE)
     kernels <- wrapr(kernels)
-    saveRDS(kernels, out_file)
+    qs::qsave(kernels, out_file)
   }
   TRUE
 }) |> invisible()
