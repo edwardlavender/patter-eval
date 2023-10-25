@@ -152,7 +152,7 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
 }) |> invisible()
 toc()
 
-#### Define detection kernels (~45 mins [?] with 10 cl)
+#### Define detection kernels (~30 with 10 cl)
 gc()
 tic()
 pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
@@ -189,7 +189,7 @@ toc()
 #### (optional) Clean up directories
 if (FALSE) {
   tic()
-  unlink(here_data("sims", "output"), recursive = TRUE)
+  unlink(here_data("sims", "output", "runs"), recursive = TRUE)
   toc()
 }
 
@@ -202,8 +202,8 @@ sims_by_realisation <-
   as.data.table()
 # Build folders
 # * output/{combination}/{array_type}/{array_realisation}/{path_realisation}/{algorithm}
-pbapply::pblapply(split(sims_by_realisation, seq_len(nrow(sims_by_realisation))), function(d) {
-  top <- here_output(d$combination, d$array_type, d$array_realisation, d$path_realisation)
+pbapply::pblapply(split(sims_by_realisation, seq_len(nrow(sims_by_realisation))), function(sim) {
+  top <- here_alg(sim)
   dir.create(top, recursive = TRUE)
   dir.create(file.path(top, "path"), recursive = TRUE)
   dir.create(file.path(top, "coa", "30 mins"), recursive = TRUE)
@@ -220,10 +220,10 @@ sims |>
   summarise(n = n()) |>
   pull(n) |>
   table()
-pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(d) {
-  top <- here_output(d$combination, d$array_type, d$array_realisation, d$path_realisation, "patter")
-  dir.create(file.path(top, "acpf", d$alg_par), recursive = TRUE)
-  dir.create(file.path(top, "acdcpf", d$alg_par), recursive = TRUE)
+pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(sim) {
+  top <- file.path(here_alg(sim), "patter")
+  dir.create(file.path(top, "acpf", sim$alg_par), recursive = TRUE)
+  dir.create(file.path(top, "acdcpf", sim$alg_par), recursive = TRUE)
 }) |> invisible()
 
 
