@@ -24,13 +24,13 @@ read_path <- function(sim) {
 }
 
 read_overlaps <- function(sim) {
-  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma, "overlaps.rds") |>
+  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma, "overlaps.qs") |>
     qs::qread()
 }
 
 read_kernels <- function(sim) {
   here_input("ac", sim$array_type, sim$array_realisation, sim$gamma,
-             sim$alpha, sim$beta, "kernels.rds") |>
+             sim$alpha, sim$beta, "kernels.qs") |>
     qs::qread() |>
     unwrapr()
 }
