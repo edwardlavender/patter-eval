@@ -49,7 +49,6 @@ get_ud_patter <- function(sim,
                           .update_ac = update_ac,
                           .kick = pf_kick,
                           .shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility,
-                          .rho = sim$rho, .sd = sim$sd,
                           .n = sim$n_particles,
                           .save_history = TRUE,
                           .verbose = FALSE)

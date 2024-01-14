@@ -170,8 +170,7 @@ range(coverage[[1]]$pc)
 # ... to reduce the number of simulations required & to improve speed)
 path_pars <- data.table(mobility = 500,
                         shape = 15,
-                        scale = 15,
-                        rho = 0)
+                        scale = 15)
 
 #### Simulate paths & associated observations (e.g., depths)
 # We simulate n_path types
@@ -179,7 +178,7 @@ n_path              <- nrow(path_pars)
 stopifnot(n_systems == n_path)
 n_path_realisations <- 30L
 origin <- matrix(mean(ext[1:2], mean(ext[3:4])), ncol = 2)
-# Simulate paths
+# Simulate paths (~3 s)
 # * One element for each set of parameters
 #   * One data.table for all realisations
 tic()
@@ -192,8 +191,7 @@ paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
                 .n_step = length(period),
                 .n_path = n_path_realisations,
                 .plot = FALSE,
-                .mobility = d$mobility, .shape = d$shape, .scale = d$scale,
-                .rho = d$rho) |>
+                .mobility = d$mobility, .shape = d$shape, .scale = d$scale) |>
     # Add time stamps & simulate depths
     mutate(timestamp := period[timestep],
            depth = sim_depth(cell_z)) |>
@@ -220,7 +218,7 @@ saveRDS(paths, here_input("paths.rds"))
 #   * One element for each array design
 #       * One data.table with detections for all array/path realisation
 
-#### Simulate detections
+#### Simulate detections (~13 s)
 tic()
 ssf()
 detections <-
@@ -254,7 +252,7 @@ saveRDS(detections, here_input("detections.rds"))
 # For each array/path realisation, we will implement the algorithms
 # ... using correct & incorrect parameter values for:
 # * detection parameters (alpha, beta, gamma)
-# * movement parameters  (mobility, shape, scale, rho, sigma)
+# * movement parameters  (mobility, shape, scale, [rho], [sigma])
 # * & sufficient/approximate values for algorithm controls (time step lengths, n particles)
 # To do this, we need to build a dataframe with correct & incorrect (or approx) values
 # * We hold each parameter at the right value & change others
@@ -289,7 +287,6 @@ alg_pars <-
       # ... we (optionally) select a subset of parameters
       selected_pars <- c("alpha", "beta", "gamma",
                          "mobility", "shape", "scale",
-                         "rho", "sd",
                          "step", "n_particles")
       constants <-
         lapply(selected_pars, function(x) {
@@ -297,10 +294,7 @@ alg_pars <-
 
           # Define a sequence of parameter values
           vals <- pars[[x]] * c(0.1, 0.5, 1, 1.5, 2)
-          # For rho, delta t & n_particles, we use selected hard-coded defaults
-          if (x == "rho") {
-            vals <- c(0.1, 0.25, 0.5)
-          }
+          # For delta t & n_particles, we use selected hard-coded defaults
           if (x == "step") {
             vals <- c(2, 4, 8)
           }
@@ -319,16 +313,12 @@ alg_pars <-
 
           # For step, we need to update the 'correct' step length parameters
           # (to account for the longer duration)
-          # TO DO - ask SB about this & check turning angles
           if (x == "step") {
             for (v in vals) {
               dp$mobility[i] <- dp$mobility[i] * (dp$step[i] / 2)
               dp$shape[i]    <- dp$shape[i] * (dp$step[i] / 2)
-              dp$scale[i]    <- dp$scale[i] * (dp$step[i] / 2)
             }
           }
-          # hist(rtruncgamma(1000, .shape = 15, .scale = 15, .mobility = 500))
-          # hist(rtruncgamma(1000, .shape = 30, .scale = 30, .mobility = 1000))
 
           # Return dp
           dp
@@ -413,7 +403,6 @@ alg_pars_dt <-
   select(system_type, path_type, alg_par,
          alpha, beta, gamma,
          mobility, shape, scale,
-         rho, sd,
          step, n_particles,
          flag) |>
   as.data.table()
@@ -428,7 +417,6 @@ sims <-
   group_by(path_type, array_type, array_realisation, path_realisation,
            alpha, beta, gamma,
            mobility, shape, scale,
-           rho, sd,
            step, n_particles) |>
   slice(1L) |>
   as.data.table()
@@ -447,8 +435,6 @@ for (i in seq_len(nrow(true_pars))) {
     sims$mobility == p$mobility &
     sims$shape == p$shape &
     sims$scale == p$scale &
-    sims$rho == p$rho &
-    sims$sd == p$sd &
     sims$step == p$step &
     sims$n_particles == p$n_particles
   )
