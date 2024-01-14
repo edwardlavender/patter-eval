@@ -63,6 +63,9 @@ sims_for_performance <-
 sims_for_performance_ls <-
   split(sims_for_performance, seq_len(nrow(sims_for_performance)))
 
+# TO DO
+# Use chunks for parallelisation for speed
+
 #### Path UDs
 # * ~3 mins, cl = 1L
 # * ~40 s, cl = 10L forks
