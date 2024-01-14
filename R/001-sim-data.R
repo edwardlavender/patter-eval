@@ -118,13 +118,13 @@ set.seed(seed)
 arrays <-
   pbapply::pblapply(split(array_pars, seq_len(nrow(array_pars))), function(d) {
     a <- sim_array(grid,
-              .lonlat = FALSE,
-              .arrangement = d$arrangement,
-              .n_array = n_array_realisations,
-              .n_receiver = d$number,
-              .receiver_start = min(as.Date(period)),
-              .receiver_end = max(as.Date(period)),
-              .plot = FALSE)
+                   .lonlat = FALSE,
+                   .arrangement = d$arrangement,
+                   .n_array = n_array_realisations,
+                   .n_receiver = d$number,
+                   .receiver_start = min(as.Date(period)),
+                   .receiver_end = max(as.Date(period)),
+                   .plot = FALSE)
     a$n_receiver  <- d$number
     a$arrangement <- d$arrangement
     a
