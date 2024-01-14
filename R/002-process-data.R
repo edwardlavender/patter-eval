@@ -198,7 +198,7 @@ if (FALSE) {
   toc()
 }
 
-#### Build folders for algorithm outputs
+#### Build folders for algorithm outputs (~1 s)
 # Define data
 sims_by_realisation <-
   sims |>
@@ -218,7 +218,7 @@ pbapply::pblapply(split(sims_by_realisation, seq_len(nrow(sims_by_realisation)))
   dir.create(file.path(top, "patter", "acdcpf"), recursive = TRUE)
 }) |> invisible()
 
-#### Build folders for patter outputs
+#### Build folders for patter outputs (~25 s)
 # Validate that each simulation is uniquely defined by the realisations & the algorithm parameters
 sims |>
   group_by(combination, array_type, array_realisation, path_realisation, alg_par) |>
