@@ -39,12 +39,12 @@ grid <- spatTemplate(.res = 5,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
-# Generate hypothetical bathymetry values
-g <- terra::as.data.frame(grid, xy = TRUE)
+# Generate hypothetical bathymetry values (deterministically)
+g       <- terra::as.data.frame(grid, xy = TRUE)
 g$depth <- gen_depth(g)
-grid <- terra::rasterize(as.matrix(g[, c("x", "y")]),
-                         grid,
-                         values = g$depth)
+grid    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
+                           grid,
+                           values = g$depth)
 # Write SpatRaster
 terra::writeRaster(grid, here_input("grid.tif"), overwrite = TRUE)
 ext <- terra::ext(grid)
@@ -171,8 +171,7 @@ range(coverage[[1]]$pc)
 path_pars <- data.table(mobility = 500,
                         shape = 15,
                         scale = 15,
-                        rho = 0,
-                        sd = 1)
+                        rho = 0)
 
 #### Simulate paths & associated observations (e.g., depths)
 # We simulate n_path types
@@ -194,7 +193,7 @@ paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
                 .n_path = n_path_realisations,
                 .plot = FALSE,
                 .mobility = d$mobility, .shape = d$shape, .scale = d$scale,
-                .rho = d$rho, .sd = d$sd) |>
+                .rho = d$rho) |>
     # Add time stamps & simulate depths
     mutate(timestamp := period[timestep],
            depth = sim_depth(cell_z)) |>
