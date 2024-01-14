@@ -28,9 +28,6 @@ library(prettyGraphics)
 library(tictoc)
 sapply(list.files(here_src(), full.names = TRUE), source)
 
-#### Load data
-seed <- 1L
-
 
 #########################
 #########################
@@ -38,10 +35,10 @@ seed <- 1L
 
 #### Define study site
 # We define a simple rectangular study site
-grid <- rast_template(.res = 5,
-                      .xmin = 0, .xmax = 1e4,
-                      .ymin = 0, .ymax = 1e4,
-                      .crs = "+proj=utm +zone=1 +datum=WGS84")
+grid <- spatTemplate(.res = 5,
+                     .xmin = 0, .xmax = 1e4,
+                     .ymin = 0, .ymax = 1e4,
+                     .crs = "+proj=utm +zone=1 +datum=WGS84")
 # Generate hypothetical bathymetry values
 g <- terra::as.data.frame(grid, xy = TRUE)
 g$depth <- gen_depth(g)
@@ -114,7 +111,7 @@ array_pars <-
 n_array              <- nrow(array_pars)
 n_array_realisations <- 1L
 tic()
-set.seed(seed)
+ssf()
 arrays <-
   pbapply::pblapply(split(array_pars, seq_len(nrow(array_pars))), function(d) {
     a <- sim_array(grid,
@@ -183,11 +180,11 @@ n_path              <- nrow(path_pars)
 stopifnot(n_systems == n_path)
 n_path_realisations <- 30L
 origin <- matrix(mean(ext[1:2], mean(ext[3:4])), ncol = 2)
-tic()
-set.seed(seed)
 # Simulate paths
 # * One element for each set of parameters
 #   * One data.table for all realisations
+tic()
+ssf()
 paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
   # Generate paths
   sim_path_walk(.bathy = grid,
@@ -226,7 +223,7 @@ saveRDS(paths, here_input("paths.rds"))
 
 #### Simulate detections
 tic()
-set.seed(seed)
+ssf()
 detections <-
   pbapply::pblapply(seq_len(n_systems), function(i) {
     d <- detection_pars[i, , drop = FALSE]
