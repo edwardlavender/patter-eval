@@ -26,7 +26,7 @@ library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(prettyGraphics)
 library(tictoc)
-sapply(list.files(here_src(), full.names = TRUE), source)
+dv::src()
 
 
 #########################
