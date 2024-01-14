@@ -156,7 +156,7 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
 }) |> invisible()
 toc()
 
-#### Define detection kernels (~30 s with 10 cl)
+#### Define detection kernels (~20 mins with 10 cl)
 gc()
 tic()
 pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
