@@ -105,6 +105,7 @@ det_pars_all <-
   sims |>
   select(array_type, array_realisation, alpha, beta, gamma) |>
   distinct() |>
+  mutate(index = row_number()) |>
   as.data.table()
 
 #### Define directories
@@ -123,7 +124,7 @@ pbapply::pbsapply(split(det_pars_all, seq_len(nrow(det_pars_all))), function(d) 
              recursive = TRUE)
 }) |> invisible()
 
-#### Define detection overlaps (2 hr 10 using 10 cl)
+#### Define detection overlaps (6 s, 10 cl; 28 s, 0 cl)
 # Define gamma parameters (for each array)
 gc()
 gammas <-
@@ -137,42 +138,46 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
   # d = split(gammas, seq_len(nrow(gammas)))[[1]]
   out_file <- here_input("ac", d$array_type, d$array_realisation, d$gamma, "overlaps.qs")
   if (!file.exists(out_file)) {
+    # Define array
     array <-
       arrays[[d$array_type]] |>
       filter(array_id == d$array_realisation) |>
       mutate(receiver_range = d$gamma) |>
       as.data.table()
+    # Define data list
+    dlist <- pat_setup_data(.moorings = array,
+                            .bathy = grid,
+                            .lonlat = FALSE)
     # Define detection containers
-    containers <- acs_setup_detection_containers(grid, array)
-    # Define overlaps & save
-    overlaps   <- acs_setup_detection_overlaps(containers, array)
+    overlaps   <- acs_setup_detection_overlaps(dlist)
     qs::qsave(overlaps, out_file)
     TRUE
   }
 }) |> invisible()
 toc()
 
-#### Define detection kernels (~30 with 10 cl)
+#### Define detection kernels (~30 s with 10 cl)
 gc()
 tic()
 pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
   # Define array data
+  print(paste(d$index, "/", max(det_pars_all$index)))
   out_file <- here_input("ac", d$array_type, d$array_realisation,
                          d$gamma, d$alpha, d$beta, "kernels.qs")
   if (!file.exists(out_file)) {
+    # Define array
     array <-
       arrays[[d$array_type]] |>
       filter(array_id == d$array_realisation) |>
       mutate(receiver_range = d$gamma) |>
       as.data.table()
-    # Read overlaps
-    overlaps <- qs::qread(here_input("ac", d$array_type, d$array_realisation,
-                                   d$gamma, "overlaps.qs"))
-    # Define detection containers & save
-    kernels <- acs_setup_detection_kernels(array,
-                                           .bathy = grid,
-                                           .calc_detection_pr = acs_setup_detection_pr,
-                                           .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
+    # Define data list
+    dlist <- pat_setup_data(.moorings = array,
+                            .bathy = grid,
+                            .lonlat = FALSE)
+    # Define detection kernels
+    kernels <- acs_setup_detection_kernels(dlist,
+                                           .alpha = d$alpha, .beta = d$beta,
                                            .verbose = FALSE)
     kernels <- wrapr(kernels)
     qs::qsave(kernels, out_file)
