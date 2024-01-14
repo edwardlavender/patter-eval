@@ -39,6 +39,7 @@ grid <- spatTemplate(.res = 5,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
+names(grid) <- "bathy"
 # Generate hypothetical bathymetry values (deterministically)
 g       <- terra::as.data.frame(grid, xy = TRUE)
 g$depth <- gen_depth(g)
