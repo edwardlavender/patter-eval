@@ -42,6 +42,9 @@ skills <- pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(sim) {
 
   #### Read UDs
   path   <- terra::rast(here_alg(sim, "path", "ud.tif"))
+  #
+  # TO DO (add control, a blank)
+  #
   if (sim$performance) {
     coa_1  <- read_rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
     coa_2  <- read_rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
