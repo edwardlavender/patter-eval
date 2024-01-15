@@ -1,22 +1,27 @@
 #' @title Workflows
 
-workflow_path <- function(sim, grid) {
+workflow_path <- function(sim, grid, im, win) {
   path    <- read_path(sim)
-  ud_path <- get_ud_path(sim = sim, grid = grid, path = path)
+  ud_path <- get_ud_path(sim = sim, grid = grid,
+                         path = path, im = im, win = win)
   if (is.null(ud_path)) {
     stop(paste0("`map_dens()` failed for simulation ID ", sim$id, "."))
   }
   NULL
 }
 
-workflow_coa <- function(sim, grid) {
+workflow_coa <- function(sim, grid, im = im, win = win) {
   acoustics <- read_acoustics(sim)
-  get_ud_coa(sim = sim, grid = grid, acoustics = acoustics, delta_t = "30 mins")
-  get_ud_coa(sim = sim, grid = grid, acoustics = acoustics, delta_t = "120 mins")
+  get_ud_coa(sim = sim, grid = grid,
+             acoustics = acoustics, delta_t = "30 mins",
+             im = im, win = win)
+  get_ud_coa(sim = sim, grid = grid,
+             acoustics = acoustics, delta_t = "120 mins",
+             im = im, win = win)
   NULL
 }
 
-workflow_patter <- function(sim, grid) {
+workflow_patter <- function(sim, grid, im = im, win = win) {
   # Read data
   acoustics <- read_acoustics(sim)
   path      <- read_path(sim)
@@ -34,10 +39,14 @@ workflow_patter <- function(sim, grid) {
   # ACPF algorithm
   get_ud_patter(sim = sim,
                 obs = obs, grid = grid,
-                array = array, overlaps = overlaps, kernels = kernels, update_ac = NULL)
+                array = array, overlaps = overlaps, kernels = kernels,
+                im = im, win = win,
+                update_ac = NULL)
   # ACDCPF algorithm
   get_ud_patter(sim = sim,
                 obs = obs, grid = grid,
-                array = array, overlaps = overlaps, kernels = kernels, update_ac = update_ac)
+                array = array, overlaps = overlaps, kernels = kernels,
+                im = im, win = win,
+                update_ac = update_ac)
   NULL
 }
