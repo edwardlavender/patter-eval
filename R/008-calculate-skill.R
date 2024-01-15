@@ -26,7 +26,7 @@ library(dv)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
-sapply(list.files(here::here("src"), full.names = TRUE), source)
+dv::src()
 
 
 #########################
