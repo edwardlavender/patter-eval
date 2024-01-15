@@ -3,17 +3,22 @@
 get_ud_path <- function(sim,
                         grid, path,
                         im, win,
-                        sigma = spatstat.explore::bw.diggle) {
+                        sigma = spatstat.explore::bw.diggle,
+                        overwrite = TRUE) {
   out_file <- here_alg(sim, "path", "ud.tif")
-  ud_path <-
-    map_dens(.map = grid,
-             .im = im,
-             .win = win,
-             .coord = path[, .(x, y)],
-             .plot = FALSE,
-             .verbose = FALSE,
-             sigma = sigma)
-  write_rast(ud_path, out_file)
+  if (overwrite | !file.exists(out_file)) {
+    ud_path <-
+      map_dens(.map = grid,
+               .im = im,
+               .win = win,
+               .coord = path[, .(x, y)],
+               .plot = FALSE,
+               .verbose = FALSE,
+               sigma = sigma)
+    write_rast(ud_path, out_file)
+  } else {
+    ud_path <- terra::rast(out_file)
+  }
   ud_path
 }
 
