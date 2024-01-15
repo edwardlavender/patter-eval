@@ -189,6 +189,20 @@ toc()
 
 #########################
 #########################
+#### Prepare spatspat inputs
+
+im  <- as.im.SpatRaster(grid)
+win <- as.owin.SpatRaster(grid, .im = im)
+
+plot(im)
+plot(win)
+
+qs::qsave(im, here_input("im.qs"))
+qs::qsave(win, here_input("win.qs"))
+
+
+#########################
+#########################
 #### Prepare output directories
 
 #### (optional) Clean up directories
