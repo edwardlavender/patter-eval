@@ -4,7 +4,7 @@ workflow_path <- function(sim, grid) {
   path    <- read_path(sim)
   ud_path <- get_ud_path(sim = sim, grid = grid, path = path)
   if (is.null(ud_path)) {
-    stop(paste0("`pf_dens()` failed for simulation ID ", sim$id, "."))
+    stop(paste0("`map_dens()` failed for simulation ID ", sim$id, "."))
   }
   NULL
 }

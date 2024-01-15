@@ -1,13 +1,18 @@
 #' @title UD functions
 
-get_ud_path <- function(sim, grid, path, sigma = spatstat.explore::bw.diggle) {
+get_ud_path <- function(sim,
+                        grid, path,
+                        im, win,
+                        sigma = spatstat.explore::bw.diggle) {
   out_file <- here_alg(sim, "path", "ud.tif")
   ud_path <-
-    pf_dens(.xpf = grid,
-            .coord = path[, .(x, y)],
-            .plot = FALSE,
-            .verbose = FALSE,
-            sigma = sigma)
+    map_dens(.map = grid,
+             .im = im,
+             .win = win,
+             .coord = path[, .(x, y)],
+             .plot = FALSE,
+             .verbose = FALSE,
+             sigma = sigma)
   write_rast(ud_path, out_file)
   ud_path
 }
@@ -20,11 +25,14 @@ get_ud_coa <- function(sim, grid, acoustics, delta_t, sigma = spatstat.explore::
   out_coa <- coa(acoustics,
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
-  ud_coa  <- pf_dens(.xpf = grid,
-                     .coord = out_coa[, .(x = coa_x, y = coa_y)],
-                     .plot = FALSE,
-                     .verbose = FALSE,
-                     sigma = sigma)
+  ud_coa  <-
+    map_dens(.map = grid,
+             .im = im,
+             .win = win,
+             .coord = out_coa[, .(x = coa_x, y = coa_y)],
+             .plot = FALSE,
+             .verbose = FALSE,
+             sigma = sigma)
   write_rast(ud_coa, out_file)
   ud_coa
 }
@@ -66,12 +74,14 @@ get_ud_patter <- function(sim,
 
   #### Smoothing
   t1_ud   <- Sys.time()
-  out_pfp <- pf_coords(out_pfb$history, grid)
-  ud_acpf <- pf_dens(.xpf = grid,
-                     .coord = out_pfp,
-                     .plot = FALSE,
-                     .verbose = FALSE,
-                     sigma = sigma)
+  out_pfp <- pf_coord(.history = out_pfb$history, .bathy = grid)
+  ud_acpf <- map_dens(.map = grid,
+                      .im = im,
+                      .win = win,
+                      .coord = out_pfp,
+                      .plot = FALSE,
+                      .verbose = FALSE,
+                      sigma = sigma)
   t2_ud <- Sys.time()
 
   #### Outputs
