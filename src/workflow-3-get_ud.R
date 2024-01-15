@@ -17,7 +17,10 @@ get_ud_path <- function(sim,
   ud_path
 }
 
-get_ud_coa <- function(sim, grid, acoustics, delta_t, sigma = spatstat.explore::bw.diggle) {
+get_ud_coa <- function(sim,
+                       grid, acoustics, delta_t,
+                       im, win,
+                       sigma = spatstat.explore::bw.diggle) {
   out_file <- here_alg(sim, "coa", delta_t, "ud.tif")
   if (difftime(max(acoustics$timestamp), min(acoustics$timestamp), units = "mins") <= delta_t) {
     return(NULL)
@@ -44,6 +47,7 @@ get_ud_rsp <- function() {
 get_ud_patter <- function(sim,
                            obs, grid,
                            array, overlaps, kernels, update_ac = NULL,
+                           im, win,
                            sigma = spatstat.explore::bw.diggle) {
 
   #### Forward simulation
