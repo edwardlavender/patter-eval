@@ -2,7 +2,7 @@
 
 workflow_path <- function(sim, grid, im, win) {
   path    <- read_path(sim)
-  stopifnot(nrow(path) == 0L)
+  stopifnot(nrow(path) != 0L)
   ud_path <- get_ud_path(sim = sim, grid = grid,
                          path = path, im = im, win = win)
   if (is.null(ud_path)) {
