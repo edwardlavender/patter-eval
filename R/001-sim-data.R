@@ -205,6 +205,7 @@ paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
     as.data.table()
 })
 toc()
+stopifnot(length(unique(paths[[1]]$path_id)) == n_path_realisations)
 saveRDS(paths, here_input("paths.rds"))
 
 
