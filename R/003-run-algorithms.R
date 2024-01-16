@@ -32,15 +32,12 @@ library(tictoc)
 dv::src()
 
 #### Load data
-grid       <- terra::rast(here_input("grid.tif"))
-sims       <- readRDS(here_input("sims.rds"))
-
-
-#########################
-#########################
-#### Generic preparation
-
-grid <- terra::wrap(grid)
+gridw      <- readRDS(here_input("gridw.rds"))
+im         <- qs::qread(here_input("im.qs"))
+win        <- qs::qread(here_input("win.qs"))
+# sims     <- readRDS(here_input("sims.rds"))
+sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
+sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
 
 #########################
@@ -53,28 +50,25 @@ grid <- terra::wrap(grid)
 # * Generate COA UDs
 # * Generate RSP UDs (TO DO)
 
-#### Prepare data
-# Isolate relevant simulations
-sims_for_performance <-
-  sims |>
-  filter(performance) |>
-  as.data.table()
-# Define list to loop over
-sims_for_performance_ls <-
-  split(sims_for_performance, seq_len(nrow(sims_for_performance)))
-
-# TO DO
-# Use chunks for parallelisation for speed
-
 #### Path UDs
-# * ~3 mins, cl = 1L
+# * ~5 mins, cl = 1L
 # * ~40 s, cl = 10L forks
 gc()
-pbapply::pblapply(sims_for_performance_ls, cl = 10L, function(sim) {
-  # sim <- sims_for_performance_ls[[1]]
-  grid <- terra::unwrap(grid)
-  workflow_path(sim, grid)
-}) |> invisible()
+tic()
+cl_lapply(sims_for_performance_ls,
+          .fun = function(sim, .chunkargs) {
+            # sim <- sims_for_performance_ls[[568]]
+            print(sim$row)
+            workflow_path(sim,
+                          grid = .chunkargs$grid,
+                          im = im, win = win)
+          },
+          .chunk = TRUE,
+          .chunk_fun = function(sim) {
+            list(grid = terra::unwrap(gridw))
+          },
+          .cl = 10L)
+toc()
 
 #### COA UDs
 # * ~3 mins, cl = 1L
