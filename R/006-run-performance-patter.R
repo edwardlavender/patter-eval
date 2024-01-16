@@ -44,9 +44,10 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 # Number of forks
 cl <- 1L
 # Define chunks to iterate over in parallel
-chunks <- patter:::cl_chunks(cl, nrow(sims_for_performance))
+chunks  <- patter:::cl_chunks(cl, nrow(sims_for_performance))
+nchunks <- length(chunks)
 # Create a log file for each chunk
-lapply(seq_len(cl), function(i) {
+lapply(seq_len(nchunks), function(i) {
   file.create(here_output("logs", paste0("log-", i, ".txt")))
 }) |> invisible()
 
@@ -59,22 +60,25 @@ guess <- 30 # 30 s
 #### Implementation
 gc()
 success <-
-  pbapply::pblapply(1, cl = NULL, function(i) {
+  pbapply::pblapply(seq_len(nchunks), cl = NULL, function(i) {
 
     #### Set up chunk
+    # Logs
     log.txt <- here_output("logs", paste0("log-", i, ".txt"))
     sink(log.txt)
     # rstudioapi::navigateToFile(log.txt)
     cat(paste("CHUNK" , i, "\n"))
     t1_chunk <- Sys.time()
     cat(paste("Start:", as.character(t1_chunk), "\n"))
+    # Grid
     grid <- terra::unwrap(grid)
+    # Simulations for chunk
     sims_for_chunk <- sims[chunks[[i]], ]
 
     #### Run simulations for chunk
     success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
-        cat(paste0("\n", sim$id, ":\n"))
+        cat(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
         workflow_patter(sim = sim,
                         grid = grid,
