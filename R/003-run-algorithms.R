@@ -90,8 +90,6 @@ cl_lapply(sims_for_performance_ls,
           .cl = 10L)
 toc()
 
-#### RSP UDs
-# TO DO
 
 #### Quick checks
 s <- sims_for_performance_ls[[2]]
@@ -115,7 +113,7 @@ par(pp)
 cl <- 2L
 # Define chunks to iterate over in parallel
 chunks <- cl_chunks(cl, nrow(sims))
-# Creare a log file for each chunk
+# Create a log file for each chunk
 lapply(seq_len(cl), function(i) {
   file.create(here_output("logs", paste0("log-", i, ".txt")))
 }) |> invisible()
@@ -145,7 +143,10 @@ success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
         cat(paste0("\n", sim$id, ":\n"))
         t1 <- Sys.time()
-        workflow_patter(sim, grid)
+        workflow_patter(sim = sim,
+                        grid = grid,
+                        im = im,
+                        win = win)
         t2 <- Sys.time()
         cat(as.numeric(difftime(t2, t1, units = "secs")))
       }) |> unlist()
