@@ -29,7 +29,7 @@ library(tictoc)
 dv::src()
 
 #### Load data
-gridw      <- readRDS(here_input("gridw.rds"))
+spatw      <- readRDS(here_input("spatw.rds"))
 im         <- qs::qread(here_input("im.qs"))
 win        <- qs::qread(here_input("win.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
@@ -55,7 +55,7 @@ cl_lapply(sims_for_performance_ls,
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
-            list(spat = terra::unwrap(gridw))
+            list(spat = terra::unwrap(spatw))
           },
           .cl = 10L)
 toc()
