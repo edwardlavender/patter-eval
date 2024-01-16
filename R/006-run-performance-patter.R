@@ -40,11 +40,14 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
+#### Define sims
+sims <- sims_for_performance
+
 #### Set up cluster
 # Number of forks
 cl <- 1L
 # Define chunks to iterate over in parallel
-chunks  <- patter:::cl_chunks(cl, nrow(sims_for_performance))
+chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
 # Create a log file for each chunk
 lapply(seq_len(nchunks), function(i) {
@@ -54,8 +57,8 @@ lapply(seq_len(nchunks), function(i) {
 #### Time trials
 # Estimated duration on {cl} CPUs, assuming simulations take {guess} seconds
 guess <- 30 # 30 s
-(nrow(sims_for_performance) * 30)/60/60/cl    # hours
-(nrow(sims_for_performance) * 30)/60/60/24/cl # days
+(nrow(sims) * 30)/60/60/cl    # hours
+(nrow(sims) * 30)/60/60/24/cl # days
 
 #### Implementation
 gc()
@@ -65,11 +68,11 @@ success <-
     #### Set up chunk
     # Logs
     log.txt <- here_output("logs", paste0("log-", i, ".txt"))
-    sink(log.txt)
+    cat_log <- patter:::cat_init(.verbose = log.txt)
     # rstudioapi::navigateToFile(log.txt)
-    cat(paste("CHUNK" , i, "\n"))
+    cat_log(paste("CHUNK" , i, "\n"))
     t1_chunk <- Sys.time()
-    cat(paste("Start:", as.character(t1_chunk), "\n"))
+    cat_log(paste("Start:", as.character(t1_chunk), "\n"))
     # Grid
     spat <- terra::unwrap(spatw)
     # Simulations for chunk
@@ -78,21 +81,21 @@ success <-
     #### Run simulations for chunk
     success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
-        cat(paste0("\n", sim$row, ":\n"))
+        cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
         workflow_patter(sim = sim,
                         spat = spat,
                         im = im,
                         win = win)
         t2 <- Sys.time()
-        cat(as.numeric(difftime(t2, t1, units = "secs")))
+        cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))
       }) |> unlist()
     t2_chunk <- Sys.time()
 
     #### Record timings & return success
-    cat("\n\n")
-    cat(paste("End:", as.character(t2_chunk), "\n"))
-    cat(paste("Duration:", round(difftime(t2_chunk, t1_chunk, units = "hours"), 2), "hours."))
+    cat_log("\n\n")
+    cat_log(paste("End:", as.character(t2_chunk), "\n"))
+    cat_log(paste("Duration:", round(difftime(t2_chunk, t1_chunk, units = "hours"), 2), "hours."))
     sink()
     success
 
