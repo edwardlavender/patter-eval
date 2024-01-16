@@ -38,6 +38,24 @@ sims       <- readRDS(here_input("sims.rds"))
 
 #########################
 #########################
+#### Simulations
+
+#### Identify performance simulations
+# Isolate relevant simulations
+sims_for_performance <-
+  sims |>
+  filter(performance) |>
+  mutate(row = row_number()) |>
+  as.data.table()
+# Define list to loop over
+sims_for_performance_ls <-
+  split(sims_for_performance, seq_len(nrow(sims_for_performance)))
+# Save
+saveRDS(sims, here_input("sims-performance.rds"))
+
+
+#########################
+#########################
 #### Prep datasets
 
 #### Arrays (~5 s)
