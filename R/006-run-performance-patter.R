@@ -60,6 +60,9 @@ guess <- 30 # 30 s
 (nrow(sims) * 30)/60/60/cl    # hours
 (nrow(sims) * 30)/60/60/24/cl # days
 
+#### Timing
+# * ~2 hour 12 mins, 10 cl
+
 #### Implementation
 gc()
 success <-
@@ -83,13 +86,14 @@ success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
         cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
-        workflow_patter(sim = sim,
-                        spat = spat,
-                        im = im,
-                        win = win)
+        .success <- workflow_patter(sim = sim,
+                                    spat = spat,
+                                    im = im,
+                                    win = win)
         t2 <- Sys.time()
         cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))
-      }) |> unlist()
+        .success
+      }) |> rbindlist()
     t2_chunk <- Sys.time()
 
     #### Record timings & return success
@@ -99,11 +103,12 @@ success <-
     sink()
     success
 
-  }) |> unlist()
+  }) |> rbindlist()
 
 #### Validate convergence
-# TO DO
-table(success)
+success
+table(success$acpf)
+table(success$acdcpf)
 
 
 #########################
@@ -118,12 +123,12 @@ qplot <- function(file) {
   points(m$receiver_easting, m$receiver_northing)
 }
 
-sim <- sims[4, ]
+sim <- sims[3, ]
 pp <- par(mfrow = c(2, 2))
 qplot(here_alg(sim, "path", "ud.tif"))
 qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
-qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud.tif"))
-qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud.tif"))
+qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
+qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
 par(pp)
 
 
