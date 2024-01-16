@@ -35,23 +35,23 @@ dv::src()
 
 #### Define study site
 # We define a simple rectangular study site
-grid <- spatTemplate(.res = 10,
+spat <- spatTemplate(.res = 10,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
-terra::ncell(grid)
+terra::ncell(spat)
 # Generate hypothetical bathymetry values (deterministically)
-g       <- terra::as.data.frame(grid, xy = TRUE)
+g       <- terra::as.data.frame(spat, xy = TRUE)
 g$depth <- gen_depth(g)
-grid    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
-                           grid,
+spat    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
+                           spat,
                            values = g$depth)
-names(grid) <- "bathy"
+names(spat) <- "bathy"
 # Write SpatRaster
-saveRDS(terra::wrap(grid), here_input("gridw.rds"))
-terra::writeRaster(grid, here_input("grid.tif"), overwrite = TRUE)
-ext <- terra::ext(grid)
-terra::ncell(grid)
+saveRDS(terra::wrap(spat), here_input("gridw.rds"))
+terra::writeRaster(spat, here_input("spat.tif"), overwrite = TRUE)
+ext <- terra::ext(spat)
+terra::ncell(spat)
 
 #### Define study period
 # Define number of days
@@ -102,7 +102,7 @@ n_systems <- nrow(detection_pars)
 # The number of receivers is chosen such that we have very to ~100 % coverage
 # (at least within receiver detection ranges)
 array_pars <-
-  expand.grid(arrangement = c("regular", "random"),
+  CJ(arrangement = c("regular", "random"),
               number = seq(10, 100, by = 10)) |>
   arrange(arrangement, number) |>
   mutate(index = row_number()) |>
@@ -117,7 +117,7 @@ tic()
 ssf()
 arrays <-
   pbapply::pblapply(split(array_pars, seq_len(nrow(array_pars))), function(d) {
-    a <- sim_array(grid,
+    a <- sim_array(spat,
                    .lonlat = FALSE,
                    .arrangement = d$arrangement,
                    .n_array = n_array_realisations,
@@ -138,7 +138,7 @@ coverage <-
   lapply(split(detection_pars, seq_len(nrow(detection_pars))), function(d) {
     pbapply::pblapply(seq_len(length(arrays)), function(i) {
       # Define detection containers
-      containers <- terra::setValues(grid, NA)
+      containers <- terra::setValues(spat, NA)
       array    <- arrays[[i]]
       array[, cell_id := terra::cellFromXY(containers, cbind(receiver_easting, receiver_northing))]
       containers[array$cell_id] <- 1
@@ -150,7 +150,7 @@ coverage <-
       area_in_containers <- terra::global(area_in_containers, "sum", na.rm = TRUE)$sum
       # Calculate % area in containers
       # * use transform = FALSE for speed
-      area_total         <- terra::expanse(grid, transform = FALSE)$area
+      area_total         <- terra::expanse(spat, transform = FALSE)$area
       data.table(array_type = i,
                  n_receiver = array$n_receiver[1],
                  arrangement = array$arrangement[1],
@@ -188,7 +188,7 @@ tic()
 ssf()
 paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
   # Generate paths
-  sim_path_walk(.bathy = grid,
+  sim_path_walk(.bathy = spat,
                 .lonlat = FALSE,
                 .origin = origin,
                 .n_step = length(period),
@@ -198,9 +198,9 @@ paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
     # Add time stamps & simulate depths
     mutate(timestamp := period[timestep],
            depth = sim_depth(cell_z)) |>
-    # Redefine path on grid
+    # Redefine path on spat
     # * This induces a small error
-    # (... grid resolution is high relative to mobility)
+    # (... spat resolution is high relative to mobility)
     select(path_id, timestep, timestamp,
            length, angle,
            x = cell_x, y = cell_y, depth) |>
@@ -223,7 +223,7 @@ saveRDS(paths, here_input("paths.rds"))
 #       * One data.table with detections for all array/path realisation
 
 #### Simulate detections (~13 s)
-pairs <- expand.grid(a = seq_len(n_array_realisations),
+pairs <- CJ(a = seq_len(n_array_realisations),
                      p = seq_len(n_path_realisations))
 pairs$key <- paste(pairs$a, pairs$p)
 tic()
@@ -352,7 +352,7 @@ alg_pars <-
 
       #### Change gamma and mobility simultaneously
       # (while holding other parameters constant)
-      gm <- expand.grid(gamma = unique(constants$gamma),
+      gm <- CJ(gamma = unique(constants$gamma),
                         mobility = unique(constants$mobility))
       keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
       gm <- cbind(gm, pars[, ..keep])
@@ -361,7 +361,7 @@ alg_pars <-
 
       #### Change beta and shape simultaneously
       # (while holding other parameters constant)
-      bs <- expand.grid(beta = unique(constants$beta),
+      bs <- CJ(beta = unique(constants$beta),
                         shape = unique(constants$shape))
       keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
       bs <- cbind(bs, pars[, ..keep])
@@ -392,7 +392,7 @@ saveRDS(alg_pars, here_input("alg_pars.rds"))
 
 #### Collect simulations
 sims <-
-  expand.grid(
+  CJ(
   combination = seq_len(n_systems),
   array_type = seq_len(n_array),
   array_realisation = seq_len(n_array_realisations),
@@ -503,8 +503,8 @@ sims <- sims[sims$count > 5L, ]
 range(sims$count)
 
 #### Update selected parameters as necessary
-# Account for grid resolution & mobility
-sims$mobility <- sims$mobility + terra::res(grid)[1]
+# Account for spat resolution & mobility
+sims$mobility <- sims$mobility + terra::res(spat)[1]
 
 #### Define IDs
 sims$id <- seq_len(nrow(sims))

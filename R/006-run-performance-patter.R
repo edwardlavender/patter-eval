@@ -71,7 +71,7 @@ success <-
     t1_chunk <- Sys.time()
     cat(paste("Start:", as.character(t1_chunk), "\n"))
     # Grid
-    grid <- terra::unwrap(grid)
+    spat <- terra::unwrap(spat)
     # Simulations for chunk
     sims_for_chunk <- sims[chunks[[i]], ]
 
@@ -81,7 +81,7 @@ success <-
         cat(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
         workflow_patter(sim = sim,
-                        grid = grid,
+                        spat = spat,
                         im = im,
                         win = win)
         t2 <- Sys.time()

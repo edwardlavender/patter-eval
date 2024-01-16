@@ -50,12 +50,12 @@ cl_lapply(sims_for_performance_ls,
             # sim <- sims_for_performance_ls[[568]]
             print(sim$row)
             workflow_path(sim,
-                          grid = .chunkargs$grid,
+                          spat = .chunkargs$spat,
                           im = im, win = win)
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
-            list(grid = terra::unwrap(gridw))
+            list(spat = terra::unwrap(gridw))
           },
           .cl = 10L)
 toc()

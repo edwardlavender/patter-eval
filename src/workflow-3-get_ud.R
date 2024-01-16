@@ -1,14 +1,14 @@
 #' @title UD functions
 
 get_ud_path <- function(sim,
-                        grid, path,
+                        spat, path,
                         im, win,
                         sigma = spatstat.explore::bw.diggle,
                         overwrite = TRUE) {
   out_file <- here_alg(sim, "path", "ud.tif")
   if (overwrite | !file.exists(out_file)) {
     ud_path <-
-      map_dens(.map = grid,
+      map_dens(.map = spat,
                .im = im,
                .win = win,
                .coord = path[, .(x, y)],
@@ -23,7 +23,7 @@ get_ud_path <- function(sim,
 }
 
 get_ud_coa <- function(sim,
-                       grid, dlist, delta_t,
+                       spat, dlist, delta_t,
                        im, win,
                        sigma = spatstat.explore::bw.diggle) {
   out_file <- here_alg(sim, "coa", delta_t, "ud.tif")
@@ -35,7 +35,7 @@ get_ud_coa <- function(sim,
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
   ud_coa  <-
-    map_dens(.map = grid,
+    map_dens(.map = spat,
              .im = im,
              .win = win,
              .coord = out_coa[, .(x = coa_x, y = coa_y)],
@@ -52,7 +52,7 @@ get_ud_rsp <- function() {
 
 get_ud_patter <- function(sim,
                           obs, dlist, algorithm = c("acpf", "acdcpf"),
-                          grid, im, win,
+                          spat, im, win,
                           sigma = spatstat.explore::bw.diggle) {
 
   #### Define simulation arguments
@@ -99,10 +99,10 @@ get_ud_patter <- function(sim,
 
   #### Smoothing (backward killer)
   t1_udk   <- Sys.time()
-  udk <- map_dens(.map = grid,
+  udk <- map_dens(.map = spat,
                   .im = im,
                   .win = win,
-                  .coord = pf_coord(.history = out_pfbk$history, .bathy = grid),
+                  .coord = pf_coord(.history = out_pfbk$history, .bathy = spat),
                   .plot = FALSE,
                   .verbose = FALSE,
                   sigma = sigma)

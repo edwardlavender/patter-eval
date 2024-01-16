@@ -48,7 +48,7 @@ unwrapr <- function(.x) {
 
 #' @examples
 if (FALSE) {
-  l <- list(grid = grid, elm = list(g = grid, b = grid, c = NULL), d = 1)
+  l <- list(spat = spat, elm = list(g = spat, b = spat, c = NULL), d = 1)
   wrapr(l)
   unwrapr(wrapr(l))
 }

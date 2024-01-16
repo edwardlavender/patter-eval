@@ -29,7 +29,7 @@ library(tictoc)
 dv::src()
 
 #### Load data
-grid       <- terra::rast(here_input("grid.tif"))
+spat       <- terra::rast(here_input("spat.tif"))
 arrays     <- readRDS(here_input("arrays.rds"))
 paths      <- readRDS(here_input("paths.rds"))
 detections <- readRDS(here_input("detections.rds"))
@@ -148,7 +148,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   out <- pat_setup_data(.acoustics = acc,
                         .archival = arc,
                         .moorings = moorings,
-                        .bathy = grid,
+                        .bathy = spat,
                         .lonlat = FALSE)
   out$spatial$bathy <- NULL
   qs::qsave(out, file.path(folder, "dlist.qs"))
@@ -192,7 +192,7 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
       as.data.table()
     # Define data list
     dlist <- pat_setup_data(.moorings = array,
-                            .bathy = grid,
+                            .bathy = spat,
                             .lonlat = FALSE)
     # Define detection containers
     overlaps   <- acs_setup_detection_overlaps(dlist)
@@ -219,7 +219,7 @@ pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, fu
       as.data.table()
     # Define data list
     dlist <- pat_setup_data(.moorings = array,
-                            .bathy = grid,
+                            .bathy = spat,
                             .lonlat = FALSE)
     # Define detection kernels
     kernels <- acs_setup_detection_kernels(dlist,
@@ -237,8 +237,8 @@ toc()
 #########################
 #### Prepare spatspat inputs
 
-im  <- as.im.SpatRaster(grid)
-win <- as.owin.SpatRaster(grid, .im = im)
+im  <- as.im.SpatRaster(spat)
+win <- as.owin.SpatRaster(spat, .im = im)
 
 plot(im)
 plot(win)
