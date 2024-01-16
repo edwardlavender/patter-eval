@@ -120,7 +120,7 @@ get_ud_patter <- function(sim,
                      ud = mins(t2_udk, t1_udk))
   qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
-  qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
+  # qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
   # UD
   write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
   return(1)
