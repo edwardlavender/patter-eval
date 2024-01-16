@@ -23,14 +23,15 @@ get_ud_path <- function(sim,
 }
 
 get_ud_coa <- function(sim,
-                       grid, acoustics, delta_t,
+                       grid, dlist, delta_t,
                        im, win,
                        sigma = spatstat.explore::bw.diggle) {
   out_file <- here_alg(sim, "coa", delta_t, "ud.tif")
+  acoustics <- dlist$data$acoustics
   if (difftime(max(acoustics$timestamp), min(acoustics$timestamp), units = "mins") <= delta_t) {
     return(NULL)
   }
-  out_coa <- coa(acoustics,
+  out_coa <- coa(.dlist = dlist,
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
   ud_coa  <-
