@@ -51,65 +51,77 @@ get_ud_rsp <- function() {
 }
 
 get_ud_patter <- function(sim,
-                           obs, grid,
-                           array, overlaps, kernels, update_ac = NULL,
-                           im, win,
-                           sigma = spatstat.explore::bw.diggle) {
+                          obs, dlist, algorithm = c("acpf", "acdcpf"),
+                          grid, im, win,
+                          sigma = spatstat.explore::bw.diggle) {
+
+  #### Define simulation arguments
+  # Proposal function
+  margs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility)
+  # Likelihood functions
+  algorithm <- match.arg(algorithm)
+  if (algorithm == "acpf") {
+    lik <-  list(acs_filter_container = acs_filter_container,
+                 pf_lik_ac = pf_lik_ac)
+  } else if (algorithm == "acdcpf") {
+    lik <-  list(pf_lik_dc = pf_lik_dc,
+                 acs_filter_container = acs_filter_container,
+                 pf_lik_ac = pf_lik_ac)
+  }
+  # Record opts
+  record <- pf_opt_record(.save = TRUE)
 
   #### Forward simulation
   t1_pff <- Sys.time()
-  set.seed(1)
-  out_pff <- pf_forward_2(obs,
-                          .bathy = grid,
-                          .moorings = array,
-                          .detection_overlaps = overlaps,
-                          .detection_kernels = kernels,
-                          .update_ac = update_ac,
-                          .kick = pf_kick,
-                          .shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility,
-                          .n = sim$n_particles,
-                          .save_history = TRUE,
-                          .verbose = FALSE)
+  ssf()
+  out_pff <- pf_forward(.obs = obs,
+                        .dlist = dlist,
+                        .rargs = margs,
+                        .dargs = margs,
+                        .likelihood = lik,
+                        .n = sim$n_particles,
+                        .record = record,
+                        .verbose = TRUE)
   t2_pff <- Sys.time()
-  if (!inherits(out_pff, "pf")) {
+  if (!out_pff$convergence) {
     return(0)
   }
 
-  #### Backward pass
-  t1_pfb <- Sys.time()
-  out_pfb <- pf_backward(out_pff$history,
-                         .save_history = TRUE,
-                         .verbose = FALSE)
-  t2_pfb <- Sys.time()
+  #### Backward killer
+  t1_pfbk <- Sys.time()
+  out_pfbk <- pf_backward_killer(out_pff$history,
+                                 .record = record,
+                                 .verbose = FALSE)
+  t2_pfbk <- Sys.time()
 
-  #### Smoothing
-  t1_ud   <- Sys.time()
-  out_pfp <- pf_coord(.history = out_pfb$history, .bathy = grid)
-  ud_acpf <- map_dens(.map = grid,
-                      .im = im,
-                      .win = win,
-                      .coord = out_pfp,
-                      .plot = FALSE,
-                      .verbose = FALSE,
-                      sigma = sigma)
-  t2_ud <- Sys.time()
+  #### Backward sampler
+  # TO DO
+
+  #### Smoothing (backward killer)
+  t1_udk   <- Sys.time()
+  udk <- map_dens(.map = grid,
+                  .im = im,
+                  .win = win,
+                  .coord = pf_coord(.history = out_pfbk$history, .bathy = grid),
+                  .plot = FALSE,
+                  .verbose = FALSE,
+                  sigma = sigma)
+  t2_udk <- Sys.time()
+
+  #### Smoothing (backward sampler)
+  # TO DO
 
   #### Outputs
   # Timings
-  folder <- ifelse(is.null(update_ac), "acpf", "acdcpf")
   time <- data.table(id = sim$id,
                      pff = mins(t2_pff, t1_pff),
-                     pfb = mins(t2_pfb, t1_pfb),
-                     ud = mins(t2_ud, t1_ud))
-  qs::qsave(time, here_alg(sim, "patter", folder, sim$alg_par, "time.qs"))
+                     pfbk = mins(t2_pfbk, t1_pfbk),
+                     pfbs = NA,
+                     ud = mins(t2_udk, t1_udk))
+  qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
-  qs::qsave(out_pfb, here_alg(sim, "patter", folder, sim$alg_par, "particles.qs"))
+  qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
   # UD
-  write_rast(ud_acpf, here_alg(sim, "patter", folder, sim$alg_par, "ud.tif"))
+  write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
   return(1)
-}
-
-update_ac <- function(.particles, .bathy, .obs, .t, ...) {
-  .particles$bathy <- terra::extract(.bathy, as.matrix(.particles[, c("x_now", "y_now")]))
-  (.particles$bathy >= .obs$depth_shallow[.t] & .particles$bathy <= .obs$depth_deep[.t]) + 0
 }
