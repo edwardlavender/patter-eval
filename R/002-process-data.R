@@ -94,7 +94,7 @@ pbapply::pblapply(sims_for_arrays_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Acoustics (~20 s)
+#### Acoustics (~14 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 sims_for_realisations <-
   sims |>
@@ -115,7 +115,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Paths (~5 s)
+#### Paths (~11 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   folder <- function(top) {
@@ -131,7 +131,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Data lists (~6 mins)
+#### Data lists (~50 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation/gamma
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   # sim <- sims_for_realisations_ls[[1]]
@@ -160,7 +160,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
 #########################
 #### Prepare AC* inputs
 
-#### Define directories
+#### Define directories (~7 s)
 # Define folders
 # * ac/{array_type}/{array_realisation}/{gamma}/overlaps.qs
 # * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.qs
@@ -196,7 +196,7 @@ pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
 }) |> invisible()
 toc()
 
-#### Define detection kernels (~20 mins with 10 cl)
+#### Define detection kernels (~5 mins with 10 cl)
 gc()
 tic()
 pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
@@ -245,7 +245,7 @@ qs::qsave(win, here_input("win.qs"))
 #########################
 #### Prepare output directories
 
-#### Build folders for algorithm outputs (~1 s)
+#### Build folders for algorithm outputs (~25 s)
 # Define data
 sims_by_realisation <-
   sims |>
