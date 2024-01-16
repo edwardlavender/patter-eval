@@ -61,8 +61,9 @@ toc()
 
 #### Quick checks
 s <- sims_for_performance_ls[[10]]
-pp <- par(mfrow = c(1, 2))
+pp <- par(mfrow = c(1, 3))
 here_alg(s, "path", "ud.tif")  |> terra_qplot()
+here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
 here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
 m <- read_array(s)
 points(m$receiver_easting, m$receiver_northing)
