@@ -131,7 +131,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Data lists (~5 mins)
+#### Data lists (~6 mins)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation/gamma
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   # sim <- sims_for_realisations_ls[[1]]
@@ -142,12 +142,15 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
                        sim$gamma)
   dir.create(folder, recursive = TRUE)
   acc      <- get_acoustics(sim, detections)
+  arc      <- get_path(sim, paths, acc)
   moorings <- get_array(sim, arrays)
   moorings$receiver_range <- sim$gamma
   out <- pat_setup_data(.acoustics = acc,
+                        .archival = arc,
                         .moorings = moorings,
                         .bathy = grid,
                         .lonlat = FALSE)
+  out$spatial$bathy <- NULL
   qs::qsave(out, file.path(folder, "dlist.qs"))
   TRUE
 }) |> invisible()
