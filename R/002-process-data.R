@@ -51,7 +51,7 @@ sims_for_performance <-
 sims_for_performance_ls <-
   split(sims_for_performance, seq_len(nrow(sims_for_performance)))
 # Save
-saveRDS(sims, here_input("sims-performance.rds"))
+saveRDS(sims_for_performance, here_input("sims-performance.rds"))
 
 
 #########################
