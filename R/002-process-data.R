@@ -54,6 +54,26 @@ saveRDS(sims_for_performance, here_input("sims-performance.rds"))
 
 #########################
 #########################
+#### Parameters
+
+#### Isolate detection parameters
+det_pars_all <-
+  sims |>
+  select(array_type, array_realisation, alpha, beta, gamma) |>
+  distinct() |>
+  mutate(index = row_number()) |>
+  as.data.table()
+
+#### Define gamma parameters
+gammas <-
+  det_pars_all |>
+  select(array_type, array_realisation, gamma) |>
+  distinct() |>
+  as.data.table()
+
+
+#########################
+#########################
 #### Prep datasets
 
 #### Arrays (~5 s)
@@ -95,7 +115,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-# Paths (~5 s)
+#### Paths (~5 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   folder <- function(top) {
@@ -111,18 +131,31 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
+#### Data lists (~5 mins)
+# * /combination {system type, path type}/array_type/array_realisation/path_realisation/gamma
+pbapply::pblapply(sims_for_realisations_ls, function(sim) {
+  # sim <- sims_for_realisations_ls[[1]]
+  folder <- here_input("dlist",
+                       sim$combination,
+                       sim$array_type, sim$array_realisation,
+                       sim$path_realisation,
+                       sim$gamma)
+  dir.create(folder, recursive = TRUE)
+  acc      <- get_acoustics(sim, detections)
+  moorings <- get_array(sim, arrays)
+  moorings$receiver_range <- sim$gamma
+  out <- pat_setup_data(.acoustics = acc,
+                        .moorings = moorings,
+                        .bathy = grid,
+                        .lonlat = FALSE)
+  qs::qsave(out, file.path(folder, "dlist.qs"))
+  TRUE
+}) |> invisible()
+
 
 #########################
 #########################
 #### Prepare AC* inputs
-
-#### Isolate detection parameters
-det_pars_all <-
-  sims |>
-  select(array_type, array_realisation, alpha, beta, gamma) |>
-  distinct() |>
-  mutate(index = row_number()) |>
-  as.data.table()
 
 #### Define directories
 # Clean directories
@@ -141,13 +174,7 @@ pbapply::pbsapply(split(det_pars_all, seq_len(nrow(det_pars_all))), function(d) 
 }) |> invisible()
 
 #### Define detection overlaps (6 s, 10 cl; 28 s, 0 cl)
-# Define gamma parameters (for each array)
 gc()
-gammas <-
-  det_pars_all |>
-  select(array_type, array_realisation, gamma) |>
-  distinct() |>
-  as.data.table()
 tic()
 pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
   # Isolate array data
