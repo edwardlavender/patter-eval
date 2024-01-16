@@ -81,7 +81,7 @@ get_ud_patter <- function(sim,
                         .likelihood = lik,
                         .n = sim$n_particles,
                         .record = record,
-                        .verbose = TRUE)
+                        .verbose = FALSE)
   t2_pff <- Sys.time()
   if (!out_pff$convergence) {
     return(0)
