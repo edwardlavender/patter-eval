@@ -12,12 +12,12 @@ workflow_path <- function(sim, grid, im, win) {
 }
 
 workflow_coa <- function(sim, grid, im = im, win = win) {
-  acoustics <- read_acoustics(sim)
+  dlist <- read_dlist(sim)
   get_ud_coa(sim = sim, grid = grid,
-             acoustics = acoustics, delta_t = "30 mins",
+             dlist = dlist, delta_t = "30 mins",
              im = im, win = win)
   get_ud_coa(sim = sim, grid = grid,
-             acoustics = acoustics, delta_t = "120 mins",
+             dlist = dlist, delta_t = "120 mins",
              im = im, win = win)
   NULL
 }
