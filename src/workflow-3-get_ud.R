@@ -26,9 +26,11 @@ get_ud_coa <- function(sim,
                        spat, dlist, delta_t,
                        im, win,
                        sigma = spatstat.explore::bw.diggle) {
-  out_file <- here_alg(sim, "coa", delta_t, "ud.tif")
+  out_file  <- here_alg(sim, "coa", delta_t, "ud.tif")
   acoustics <- dlist$data$acoustics
-  if (difftime(max(acoustics$timestamp), min(acoustics$timestamp), units = "mins") <= delta_t) {
+  if (secs(difftime(max(acoustics$timestamp),
+                    min(acoustics$timestamp),
+                    units = "mins")) <= secs(delta_t)) {
     return(NULL)
   }
   out_coa <- coa(.dlist = dlist,
