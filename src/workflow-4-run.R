@@ -11,7 +11,7 @@ workflow_path <- function(sim, grid, im, win) {
   NULL
 }
 
-workflow_coa <- function(sim, grid, im = im, win = win) {
+workflow_coa <- function(sim, grid, im, win) {
   dlist <- read_dlist(sim)
   get_ud_coa(sim = sim, grid = grid,
              dlist = dlist, delta_t = "30 mins",
@@ -22,32 +22,30 @@ workflow_coa <- function(sim, grid, im = im, win = win) {
   NULL
 }
 
-workflow_patter <- function(sim, grid, im = im, win = win) {
-  # Read data
-  acoustics <- read_acoustics(sim)
-  path      <- read_path(sim)
-  array     <- read_array(sim)
-  overlaps  <- read_overlaps(sim)
-  kernels   <- read_kernels(sim)
-  # Algorithm preparation
+workflow_patter <- function(sim, grid, im, win) {
+  # Define data list
+  # (optional) TO DO
+  # * Pre-prepare dlist as required with detection_overlaps & detection_kernels elements
+  dlist <- read_dlist(sim)
+  dlist$spatial$bathy <- grid
+  dlist$algorithm$detection_overlaps <- read_overlaps(sim)
+  dlist$algorithm$detection_kernels  <- read_kernels(sim)
+  # Define observation timeline
   # * Note that sim$mobility has been adjusted for grid resolution (see sim-data.R)
-  obs <- acs_setup_obs(acoustics,
-                       .archival = path,
-                       .step = paste(sim$step, "mins"),
-                       .mobility = sim$mobility)
+  obs <- pf_setup_obs(.dlist = dlist,
+                      .trim = TRUE,
+                      .step = paste(sim$step, "mins"),
+                      .mobility = sim$mobility,
+                      .receiver_range = dlist$data$moorings$receiver_range[1])
   obs[, depth_shallow := obs$depth - 5]
   obs[, depth_deep := obs$depth + 5]
   # ACPF algorithm
   get_ud_patter(sim = sim,
-                obs = obs, grid = grid,
-                array = array, overlaps = overlaps, kernels = kernels,
-                im = im, win = win,
-                update_ac = NULL)
+                obs = obs, dlist = dlist, algorithm = "acpf",
+                grid = grid, im = im, win = win)
   # ACDCPF algorithm
   get_ud_patter(sim = sim,
-                obs = obs, grid = grid,
-                array = array, overlaps = overlaps, kernels = kernels,
-                im = im, win = win,
-                update_ac = update_ac)
+                obs = obs, dlist = dlist, algorithm = "acdcpf",
+                grid = grid, im = im, win = win)
   NULL
 }
