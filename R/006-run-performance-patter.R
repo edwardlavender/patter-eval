@@ -71,7 +71,7 @@ success <-
     t1_chunk <- Sys.time()
     cat(paste("Start:", as.character(t1_chunk), "\n"))
     # Grid
-    spat <- terra::unwrap(spat)
+    spat <- terra::unwrap(spatw)
     # Simulations for chunk
     sims_for_chunk <- sims[chunks[[i]], ]
 
