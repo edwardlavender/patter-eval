@@ -53,7 +53,13 @@ get_ud_rsp <- function() {
 get_ud_patter <- function(sim,
                           obs, dlist, algorithm = c("acpf", "acdcpf"),
                           spat, im, win,
-                          sigma = spatstat.explore::bw.diggle) {
+                          sigma = spatstat.explore::bw.diggle,
+                          overwrite = TRUE) {
+
+  out_file <- here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif")
+  if (!overwrite && file.exists(out_file)) {
+    return(1L)
+  }
 
   #### Define simulation arguments
   # Proposal function
@@ -84,7 +90,7 @@ get_ud_patter <- function(sim,
                         .verbose = FALSE)
   t2_pff <- Sys.time()
   if (!out_pff$convergence) {
-    return(0)
+    return(0L)
   }
 
   #### Backward killer
@@ -122,6 +128,6 @@ get_ud_patter <- function(sim,
   # Particle samples (for checks)
   # qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
   # UD
-  write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
-  return(1)
+  write_rast(udk, out_file)
+  return(1L)
 }
