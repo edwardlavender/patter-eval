@@ -47,10 +47,8 @@ sims_for_performance <-
   filter(performance) |>
   mutate(row = row_number()) |>
   as.data.table()
-# Define list to loop over
-sims_for_performance_ls <-
-  split(sims_for_performance, seq_len(nrow(sims_for_performance)))
 # Save
+nrow(sims_for_performance) # 599
 saveRDS(sims_for_performance, here_input("sims-performance.rds"))
 
 
