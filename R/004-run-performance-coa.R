@@ -40,8 +40,7 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
-# * ~3 mins, cl = 1L (?)
-# * ~77 s, cl = 10L forks
+# ~25 s
 
 gc()
 tic()
