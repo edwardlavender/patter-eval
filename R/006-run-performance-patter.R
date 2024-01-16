@@ -45,7 +45,7 @@ sims <- sims_for_performance
 
 #### Set up cluster
 # Number of forks
-cl <- 1L
+cl <- 10L
 # Define chunks to iterate over in parallel
 chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
@@ -63,7 +63,7 @@ guess <- 30 # 30 s
 #### Implementation
 gc()
 success <-
-  pbapply::pblapply(seq_len(nchunks), cl = NULL, function(i) {
+  pbapply::pblapply(seq_len(nchunks), cl = cl, function(i) {
 
     #### Set up chunk
     # Logs
