@@ -40,12 +40,12 @@ workflow_patter <- function(sim, spat, im, win) {
   obs[, depth_shallow := obs$depth - 5]
   obs[, depth_deep := obs$depth + 5]
   # ACPF algorithm
-  get_ud_patter(sim = sim,
-                obs = obs, dlist = dlist, algorithm = "acpf",
-                spat = spat, im = im, win = win)
+  success_acpf <- get_ud_patter(sim = sim,
+                                obs = obs, dlist = dlist, algorithm = "acpf",
+                                spat = spat, im = im, win = win)
   # ACDCPF algorithm
-  get_ud_patter(sim = sim,
-                obs = obs, dlist = dlist, algorithm = "acdcpf",
-                spat = spat, im = im, win = win)
-  NULL
+  success_acdcpf <- get_ud_patter(sim = sim,
+                                  obs = obs, dlist = dlist, algorithm = "acdcpf",
+                                  spat = spat, im = im, win = win)
+  data.table(row = sim$row, acpf = success_acpf, acdcpf = success_acdcpf)
 }
