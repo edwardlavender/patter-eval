@@ -47,6 +47,7 @@ grid    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
                            values = g$depth)
 names(grid) <- "bathy"
 # Write SpatRaster
+saveRDS(terra::wrap(grid), here_input("gridw.rds"))
 terra::writeRaster(grid, here_input("grid.tif"), overwrite = TRUE)
 ext <- terra::ext(grid)
 terra::ncell(grid)
