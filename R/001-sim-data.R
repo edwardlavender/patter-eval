@@ -221,26 +221,46 @@ saveRDS(paths, here_input("paths.rds"))
 #       * One data.table with detections for all array/path realisation
 
 #### Simulate detections (~13 s)
+pairs <- expand.grid(a = seq_len(n_array_realisations),
+                     p = seq_len(n_path_realisations))
+pairs$key <- paste(pairs$a, pairs$p)
 tic()
 ssf()
 detections <-
   pbapply::pblapply(seq_len(n_systems), function(i) {
     d <- detection_pars[i, , drop = FALSE]
     .paths <- paths[[i]]
-    lapply(arrays, function(.arrays) {
-      sim_detections(.paths = .paths,
-                     .arrays = .arrays,
-                     .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
-                     .type = "combinations",
-                     .return = c("array_id", "path_id",
-                                 "timestamp", "timestep",
-                                 "receiver_id", "receiver_easting", "receiver_northing"))
+    lapply(seq_len(n_array), function(j) {
+      sim <- sim_detections(.paths = .paths,
+                            .arrays = arrays[[j]],
+                            .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
+                            .type = "combinations",
+                            .return = c("array_id", "path_id",
+                                        "timestamp", "timestep",
+                                        "receiver_id", "receiver_easting", "receiver_northing"))
+      sim$key <- paste(sim$array_id, sim$path_id)
+      if (!all(pairs$key %in% sim$key)) {
+        print(i); print(j)
+        print(pairs[!(pairs$key %in% sim$key), ])
+        warning("Some keys did not generate detections.",
+                call. = FALSE, immediate. = TRUE)
+      }
+      sim
     })
   })
 toc()
+# The following combinations do not yield detections:
+# [1] 1  - combination 1
+# [1] 11 - array 11
+# array/path realisation:
+#    a  p key
+# 28 1 28 1 28
+detections[[1]][[11]][path_id == 28, ]
 
-#### Examine simulated detections
-# Note that not all array/path realisations may generate detections
+#### Drop realisations without sufficient detections
+# Not all array/path realisations may generate detections
+# We exclude simulations without sufficient observations
+# (see below).
 
 #### Save detections
 saveRDS(detections, here_input("detections.rds"))
@@ -460,6 +480,25 @@ pos <- which(!sims$performance & sims$flag == "bs" & !(sims$n_receiver %in% nr))
 if (length(pos) > 0) {
   sims <- sims[-pos, ]
 }
+
+#### Exclude simulations with insufficient detections (~37 s)
+# Count the number of detections for each simulation
+tic()
+n <- nrow(sims)
+sims$count <- 0L
+for (i in seq_len(n)) {
+  svMisc::progress(i, n)
+  sims$count[i] <-
+    detections[[sims$system_type[i]]][[sims$array_type[i]]][
+    array_id == sims$array_realisation[i] & path_id == sims$path_realisation[i], ] |>
+    nrow()
+}
+toc()
+hist(sims$count, breaks = 100)
+# Drop simulations with insufficient detections
+n; nrow(sims[sims$count > 5L, ])
+sims <- sims[sims$count > 5L, ]
+range(sims$count)
 
 #### Update selected parameters as necessary
 # Account for grid resolution & mobility
