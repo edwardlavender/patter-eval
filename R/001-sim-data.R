@@ -35,10 +35,11 @@ dv::src()
 
 #### Define study site
 # We define a simple rectangular study site
-grid <- spatTemplate(.res = 5,
+grid <- spatTemplate(.res = 10,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
+terra::ncell(grid)
 # Generate hypothetical bathymetry values (deterministically)
 g       <- terra::as.data.frame(grid, xy = TRUE)
 g$depth <- gen_depth(g)
