@@ -161,12 +161,6 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
 #### Prepare AC* inputs
 
 #### Define directories
-# Clean directories
-if (FALSE) {
-  tic()
-  unlink(here_input("ac"), recursive = TRUE)
-  toc()
-}
 # Define folders
 # * ac/{array_type}/{array_realisation}/{gamma}/overlaps.qs
 # * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.qs
@@ -250,13 +244,6 @@ qs::qsave(win, here_input("win.qs"))
 #########################
 #########################
 #### Prepare output directories
-
-#### (optional) Clean up directories
-if (FALSE) {
-  tic()
-  unlink(here_data("sims", "output", "runs"), recursive = TRUE)
-  toc()
-}
 
 #### Build folders for algorithm outputs (~1 s)
 # Define data
