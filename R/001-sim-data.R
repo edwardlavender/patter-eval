@@ -35,6 +35,8 @@ dv::src()
 
 #### Define study site
 # We define a simple rectangular study site
+# * We formerly used a 5 m grid
+# * A 10 m grid is MUCH faster for most routines
 spat <- spatTemplate(.res = 10,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
