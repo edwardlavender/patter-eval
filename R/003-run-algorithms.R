@@ -71,24 +71,36 @@ cl_lapply(sims_for_performance_ls,
 toc()
 
 #### COA UDs
-# * ~3 mins, cl = 1L
-# * ~40 s, cl = 10L forks
+# * ~3 mins, cl = 1L (?)
+# * ~77 s, cl = 10L forks
 gc()
-pbapply::pblapply(sims_for_performance_ls, cl = 10L, function(sim) {
-  # sim <- sims_for_performance_ls[[1]]
-  grid <- terra::unwrap(grid)
-  workflow_coa(sim, grid)
-}) |> invisible()
+tic()
+cl_lapply(sims_for_performance_ls,
+          .fun = function(sim, .chunkargs) {
+            # sim <- sims_for_performance_ls[[1]]
+            print(sim$row)
+            workflow_coa(sim = sim,
+                         grid = .chunkargs$grid,
+                         im = im, win = win)
+          },
+          .chunk = TRUE,
+          .chunk_fun = function(sim) {
+            list(grid = terra::unwrap(gridw))
+          },
+          .cl = 10L)
+toc()
 
 #### RSP UDs
 # TO DO
 
 #### Quick checks
 s <- sims_for_performance_ls[[2]]
+pp <- par(mfrow = c(1, 2))
 here_alg(s, "path", "ud.tif")  |> terra_qplot()
 here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
 m <- read_array(s)
 points(m$receiver_easting, m$receiver_northing)
+par(pp)
 
 
 #########################
