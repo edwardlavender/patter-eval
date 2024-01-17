@@ -188,46 +188,47 @@ dev.off()
 # * use n_receivers or detection coverage here
 #
 
+combs <- unique(sims$combination)
+nc    <- length(unique(sims$combination))
 png(here_fig("performance", "relationships.png"),
-    height = 10, width = 10, units = "in", res = 600)
-pp <- par(mfrow = c(4, 5))
-lapply(split(sims, sims$combination), function(sim) {
+    height = 4 * nc, width = 12, units = "in", res = 600)
+pp <- par(mfrow = c(nc * 2, length(metrics)), oma = c(1, 3, 1, 1), mar = rep(2, 4))
+lapply(combs, function(combination) {
 
-  # Read all skill datasets
-  skill <-
-    here_output("skill", paste0(sim$id, ".rds")) |>
-    lapply(readRDS) |>
-    rbindlist()
-  # TO DO
-  # Add array details (number, arrangement) by merging with sims
+  # Identify skill datasets
+  # combination <- 1
+  skill <- skills[system_type == combination, ]
 
   # Loop over array arrangements
   lapply(split(skill, skill$arrangement), function(sk) {
-    # Summarise average skill across all simulations
-    # * For coverage, coverage statistics may need to be binned
-    sk_sry <-
-      sk |>
-      group_by(alg, n_receivers) |>
-      mutate(across(all_of(metrics)), mean) |>
-      slice(1L) |>
-      as.data.table()
-
     # Visualise skill ~ n_receivers
     lapply(metrics, function(metric) {
-      # (optional) Assign colours based on skill quantile bins at each n_receiver level
-      # utils.add::find_quantile_bin()
       # Create plot, distinguishing between algorithms
-      pretty_plot(sk$n_receivers, sk[[metric]],
-                  colour = sk$alg)
-      # Add average line across all simulations
-      lapply(split(sk_sry, sk_sry$alg), function(d) {
-        lines(d$n_receivers, d[[metric]], col = d$alg, lwd = 2)
+      # metric <- metrics[1]
+      x <- sk$n_receiver + rnorm(nrow(sk), 0, 1)
+      y <- sk[[metric]]
+      pretty_plot(x, y,
+                  col = scales::alpha(sk$alg, 0.75),
+                  xlab = "", ylab = "",
+                  cex = 0.5, lwd = 0.5)
+      # Add trends for each algorithm
+      lapply(split(sk, sk$alg, drop = TRUE), function(d) {
+       # d <- split(sk, sk$alg)[[1]]
+        add_smoother(d$n_receiver, d[[metric]], col = d$alg, lwd = 2)
       }) |> invisible()
     }) |> invisible()
 
   }) |> invisible()
 }) |> invisible()
 dev.off()
+
+# Check colours
+plot(c(0, 1), c(0, 1), type = "n")
+lines(c(0, 1), c(0.1, 0.1), col = unique(skills$alg)[1])
+lines(c(0, 1), c(0.2, 0.2), col = unique(skills$alg)[2])
+lines(c(0, 1), c(0.3, 0.3), col = unique(skills$alg)[3])
+lines(c(0, 1), c(0.4, 0.4), col = unique(skills$alg)[4])
+lines(c(0, 1), c(0.5, 0.5), col = unique(skills$alg)[5])
 
 
 #### End of code.
