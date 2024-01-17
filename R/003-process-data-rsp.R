@@ -124,6 +124,7 @@ actel <-
 #### Build transitionMatrix (~1 s)
 tic()
 spat_ll <- terra::project(spat, "EPSG:4326")
+terra::writeRaster(spat_ll, here_input("spat_ll.tif"))
 tm <- actel::transitionLayer(raster::raster(spat_ll))
 qs::qsave(tm, here_input("actel", "tm.qs"))
 toc()
