@@ -38,10 +38,15 @@ dv::src()
 # * We formerly used a 5 m grid
 # * A 10 m grid is MUCH faster for most routines
 spat <- spatTemplate(.res = 10,
+                     .value = 1,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
 terra::ncell(spat)
+# Define blank SpatRaster
+# (used as a NULL model)
+spat <- spat / terra::global(spat, "sum")[1, 1]
+terra::writeRaster(spat, here_input("blank.tif"), overwrite = TRUE)
 # Generate hypothetical bathymetry values (deterministically)
 g       <- terra::as.data.frame(spat, xy = TRUE)
 g$depth <- gen_depth(g)
