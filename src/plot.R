@@ -17,3 +17,17 @@ spatAxes <- function(x) {
   axis(side = 3, pos = b[4], tck = 0.025, labels = FALSE)
   axis(side = 4, pos = b[2], tck = 0.025, labels = FALSE)
 }
+
+#' @title Add a smoother to a plot
+
+add_smoother <- function(x, y, ...) {
+  if (all(is.na(y))) {
+    return(NULL)
+  }
+  mod  <- mgcv::gam(y ~ s(x, k = 3))
+  data <- data.frame(x = seq(min(x, na.rm = TRUE),
+                             max(x, na.rm = TRUE),
+                             length.out = 100))
+  data$y <- predict(mod, newdata = data, type = "response")
+  lines(data$x, data$y, ...)
+}
