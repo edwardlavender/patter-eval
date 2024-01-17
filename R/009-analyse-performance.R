@@ -28,19 +28,14 @@ library(tictoc)
 dv::src()
 
 #### Load data
-sims <- readRDS(here_input("sims.rds"))
+# Performance simulations
+sims <- readRDS(here_input("sims-performance.rds"))
 
 
 #########################
 #########################
 #### Data preparation
 
-#### Select results for a specific combination
-# Filter sims
-sims <-
-  sims |>
-  filter(performance) |>
-  as.data.table()
 # Define function that assigns png names
 png_name <- function(name) {
   paste0(name, "-",  sims$combination[1], ".png")
@@ -61,36 +56,68 @@ metrics <- c("mb", "me", "rmse", "R", "d")
 sims_for_maps <-
   sims |>
   filter(combination == 1L) |>
-  filter(n_receivers == nr) |>
+  filter(n_receiver %in% nr) |>
   filter(array_realisation == 1L & path_realisation == 1L) |>
-  arrange(arrangement, n_receivers)
+  arrange(arrangement, n_receiver) |>
   as.data.table()
 
 #### Set up plot
 # The figure will be annotated outside of R.
 png(here_fig("performance", png_name("map")),
-    height = 10, width = 10, units = "in", res = 600)
-pp <- par(mfrow = c(4, 7))
-lapply(1:4, function(i) {
+    height = 7, width = 10, units = "in", res = 600)
+pp <- par(mfrow = c(4, 5))
+pbapply::pblapply(1:4, function(i) {
 
-  # Read UDs
-  id       <- sims_for_maps$sim[i]
-  ud_path  <- terra::rast(here_alg(id, "path", "ud.tif"))
-  ud_coa_1 <- terra::rast(here_alg(id, "coa", "30 mins", "ud.tif"))
-  ud_coa_2 <- terra::rast(here_alg(id, "coa", "30 mins", "ud.tif"))
+  #### Read UDs
+  sim      <- sims_for_maps[i, ]
+  # list.files(here_alg(sim), recursive = TRUE)
+  ud_path  <- terra::rast(here_alg(sim, "path", "ud.tif"))
+  ud_coa_1 <- terra::rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
+  ud_coa_2 <- terra::rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
   # ud_rsp_1
   # ud_rsp_2
-  ud_acpf   <- terra::rast(here_alg(id, "patter", "acpf", "ud.tif"))
-  ud_acdcpf <- terra::rast(here_alg(id, "patter", "acdcpf", "ud.tif"))
-  uds <- list(ud_coa_1, ud_coa_2,
+  ud_acpf   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
+  ud_acdcpf <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
+  uds <- list(ud_path,
+              ud_coa_1, ud_coa_2,
               ud_acpf, ud_acdcpf)
 
-  # Scale UDs (within rows) to a maximum value of 1 for comparison
+  #### Calculate scaling parameter
+  # We will scale UDs (within rows) to a maximum value of 1 for comparison
+  # Scaling is implemented below to ensure correct HR calculation
   scale <- sapply(uds, \(ud) terra::global(ud, "max")$max) |> max()
-  uds   <- lapply(uds, \(ud) ud / scale)
+  # uds   <- lapply(uds, \(ud) ud / scale)
+  # sapply(uds, \(ud) terra::global(ud, "max"))
 
-  # Plot UDs for selected array
-  lapply(uds, terra::plot) |> invisible()
+  #### Plot UDs for selected array
+  m <- read_array(sim)
+  lapply(uds, function(ud) {
+    # Plot UD (scaled)
+    sud <- ud / scale
+    spatMap(sud, range = c(0, 1), legend = FALSE)
+    # Add home range (based on unscaled UD)
+    map_hr_home(ud, .add = TRUE,
+                border = "dimgrey", lwd = 0.75)
+    # Plot UD (scaled)
+    # terra::plot(ud)
+    # Add receivers
+    points(m$receiver_easting, m$receiver_northing,
+           pch = 21,
+           bg = scales::alpha("black", 0.75),
+           col = scales::alpha("black", 0.75),
+           cex = 0.5)
+    # Add detection range(s)
+    # * We use a scale bar instead
+    if (FALSE) {
+      cbind(m$receiver_easting, m$receiver_northing) |>
+        terra::vect() |>
+        terra::buffer(width = sim$gamma) |>
+        terra::lines(lwd = 0.5, col = "dimgrey")
+    }
+    spatAxes(ud)
+    terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
+    NULL
+  }) |> invisible()
 
 }) |> invisible()
 dev.off()
@@ -105,9 +132,9 @@ dev.off()
 sims <-
   sims |>
   filter(combination == 1L) |>
-  filter(n_receivers == nr) |>
+  filter(n_receiver == nr) |>
   filter(array_realisation == 1L) |>
-  arrange(arrangement, n_receivers) |>
+  arrange(arrangement, n_receiver) |>
   as.data.table()
 
 #### Visualise boxplots
