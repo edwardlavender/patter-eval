@@ -24,12 +24,14 @@ library(patter)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(prettyGraphics)
 library(tictoc)
 dv::src()
 
 #### Load data
 # Performance simulations
-sims <- readRDS(here_input("sims-performance.rds"))
+sims   <- readRDS(here_input("sims-performance.rds"))
+skills <- readRDS(here_data("sims", "synthesis", "skill.rds"))
 
 
 #########################
@@ -45,6 +47,18 @@ png_name <- function(name) {
 # On some plots, we only consider two different numbers of receivers
 nr <- c(10, 100)
 metrics <- c("mb", "me", "rmse", "R", "d")
+metrics_lim <-
+  list(mb = NULL,
+       me = NULL,
+       rmse = NULL,
+       R = c(0, 1),
+       d = c(0, 1))
+
+#### Skill factors
+unique(skills$alg)
+skills$alg <- factor(skills$alg,
+                     c("Null", "COA(30)", "COA(120)", "ACPF(K)", "ACDCPF(K)"),
+                     labels = 0:4)
 
 
 #########################
@@ -128,26 +142,39 @@ dev.off()
 #### Barplots of error statistics
 
 #### Select simulations
-# Select specific path realisation
-sims <-
+# Define arrays
+combs <- CJ(arrangement = c("random", "regular"),
+            n_receiver = nr)
+# Define simulations
+sims_for_skill <-
   sims |>
   filter(combination == 1L) |>
-  filter(n_receiver == nr) |>
-  filter(array_realisation == 1L) |>
+  filter(n_receiver %in% nr) |>
   arrange(arrangement, n_receiver) |>
   as.data.table()
 
 #### Visualise boxplots
 png(here_fig("performance", png_name("barplots")),
-    height = 10, width = 10, units = "in", res = 600)
-pp <- par(mfrow = c(4, 6))
+    height = 10, width = 15, units = "in", res = 600)
+pp <- par(mfrow = c(4, 5), oma = c(1, 3, 1, 1), mar = c(2, 2, 2, 2))
 lapply(1:4, function(i) {
-  # Load skill scores for selected simulation run
-  id <- sims$id[i]
-  skill <- readRDS(here_output("skill", paste0(id, ".rds")))
+  # Define skill scores across path realisations
+  skill <- skills[id %in%
+                  sims_for_skill[arrangement == combs$arrangement[i] & n_receiver == combs$n_receiver[i], ]$id
+                  ]
+
   # Visualise distribution of error scores (by metric)
   lapply(metrics, function(metric) {
-    pretty_boxplot(skill$alg, skill[[metric]])
+    # metric <- metrics[1]
+    x <- skill$alg
+    y <- skill[[metric]]
+    # p <- min(floor(log10(abs(y))), na.rm = TRUE)
+    # y <- y / 10^p
+    pretty_boxplot(x, y,
+                   varwidth = TRUE,
+                   ylim = metrics_lim[[metric]],
+                   las = TRUE,
+                   xlab = "", ylab = "")
   }) |> invisible()
 }) |> invisible()
 dev.off()
