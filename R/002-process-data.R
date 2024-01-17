@@ -1,6 +1,6 @@
 #########################
 #########################
-#### run-algorithms-prep.R
+#### process-data.R
 
 #### Aims:
 # (1) Prepare for algorithm implementations
@@ -103,7 +103,8 @@ sims_for_realisations <-
            path_realisation) |>
   slice(1L) |>
   as.data.table()
-sims_for_realisations_ls <- split(sims_for_realisations, seq_len(nrow(sims_for_realisations)))
+sims_for_realisations_ls <-
+  split(sims_for_realisations, seq_len(nrow(sims_for_realisations)))
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   folder <- here_input("acoustics",
                        sim$combination,
@@ -154,6 +155,12 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   qs::qsave(out, file.path(folder, "dlist.qs"))
   TRUE
 }) |> invisible()
+
+#### Actel objects (~41 s)
+# This code has to be run non interactively to avoid prompts.
+tic()
+system("R CMD BATCH --no-save --no-restore ./R/003-process-data-rsp.R ./data/sims/input/actel/log.txt")
+toc()
 
 
 #########################
