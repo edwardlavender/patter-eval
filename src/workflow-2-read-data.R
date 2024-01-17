@@ -44,3 +44,12 @@ read_kernels <- function(sim) {
     qs::qread() |>
     unwrapr()
 }
+
+read_actel <- function(sim) {
+  here_input("actel",
+             sim$combination,
+             sim$array_type, sim$array_realisation,
+             sim$path_realisation,
+             "actel.qs") |>
+    qs::qread()
+}
