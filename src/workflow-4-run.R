@@ -22,6 +22,14 @@ workflow_coa <- function(sim, spat, im, win) {
   NULL
 }
 
+workflow_rsp <- function(sim, spat, spat_ll, tm) {
+  get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+             er.ad = er.ad.1)
+  get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+             er.ad = er.ad.2)
+  NULL
+}
+
 workflow_patter <- function(sim, spat, im, win) {
   # Define data list
   # (optional) TO DO
