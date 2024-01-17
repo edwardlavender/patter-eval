@@ -47,8 +47,26 @@ get_ud_coa <- function(sim,
   ud_coa
 }
 
-get_ud_rsp <- function() {
-
+get_ud_rsp <- function(sim, spat, spat_ll, tm, er.add, overwrite = TRUE) {
+  # Define outfile
+  out_file <- here_alg(sim, "rsp", er.add, "ud.tif")
+  # Read actel
+  act <- read_actel(sim)
+  # Run RSP
+  out_rsp <- RSP::runRSP(input = act, t.layer = tm,
+                         coord.x = "Longitude", coord.y = "Latitude",
+                         er.ad = er.add)
+  # Generate UD
+  ud_rsp <- RSP::dynBBMM(input = out_rsp,
+                         base.raster = spat_ll,
+                         UTM = "1")
+  ud_rsp <- ud_rsp$dbbmm[[1]]
+  # Resample RSP onto spat grid for consistency
+  ud_rsp <- raster::resample(ud_rsp, spat)
+  ud_rsp <- ud_rsp / terra::global(ud_rsp, "sum")[1, 1]
+  stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
+  write_rast(ud_rsp, out_file)
+  NULL
 }
 
 get_ud_patter <- function(sim,
