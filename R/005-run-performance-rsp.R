@@ -47,15 +47,18 @@ success <-
           .fun = function(sim, .chunkargs) {
             # sim <- sims_for_performance_ls[[1]]
             print(sim$row)
+            tic()
             workflow_rsp(sim = sim,
                          spat = .chunkargs$spat,
                          spat_ll_dbb = .chunkargs$spat_ll_dbb,
                          tm = tm)
+            toc()
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
-            list(spat = terra::unwrap(spatw),
+            .chunkargs <- list(spat = terra::unwrap(spatw),
                  spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
+            .chunkargs
           },
           .cl = NULL)
 toc()

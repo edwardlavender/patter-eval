@@ -48,6 +48,7 @@ get_ud_coa <- function(sim,
 }
 
 get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
+  # er.ad <- er.ad.1
   # Define outfile
   out_file <- here_alg(sim, "rsp", er.ad, "ud.tif")
   # Read actel
@@ -73,19 +74,20 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
     return("runRSP")
   }
   # Generate UD
-  ud_rsp <- tryCatch(
+  dbb <- tryCatch(
     RSP::dynBBMM(input = out_rsp,
                  base.raster = spat_ll_dbb,
                  UTM = "1"),
     error = function(e) e)
-  if (inherits(ud_rsp, "error")) {
+  if (inherits(dbb, "error")) {
     warning("RSP::dynBBMM() failure!")
-    warning(ud_rsp$message)
+    warning(dbb$message)
     return("dynBBMM")
   }
-  ud_rsp <- ud_rsp$dbbmm[[1]]
+  dbb <- dbb$dbbmm[[1]]
   # Resample RSP onto spat grid for consistency
-  ud_rsp <- raster::resample(ud_rsp, spat)
+  ud_rsp <- terra::project(terra::rast(dbb), terra::crs(spat))
+  ud_rsp <- terra::resample(ud_rsp, spat)
   ud_rsp <- ud_rsp / terra::global(ud_rsp, "sum")[1, 1]
   stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
   write_rast(ud_rsp, out_file)
