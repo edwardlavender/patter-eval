@@ -121,11 +121,21 @@ actel <-
     TRUE
   }) |> invisible()
 
-#### Build transitionMatrix (~1 s)
+#### Build transitionMatrix (~15 s)
 tic()
+# Define spat in lon/lat
+# * This is required b/c actel::transitionLayer() uses gdistance::geocorrection()
 spat_ll <- terra::project(spat, "EPSG:4326")
-terra::writeRaster(spat_ll, here_input("spat_ll.tif"))
-tm <- actel::transitionLayer(raster::raster(spat_ll))
+terra::writeRaster(spat_ll, here_input("spat_ll.tif"), overwrite = TRUE)
+# Define 'water' SpatRaster as required by RSP
+water <- terra::setValues(spat_ll, 1)
+names(water) <- "layer"
+terra::plot(water)
+# Define transition layer
+# * The input here must be a SpatRaster, raster::raster() is used internally
+# * Otherwise the tm is not defined correctly
+tm <- actel::transitionLayer(water, directions = 8L)
+terra::plot(raster::raster(tm))
 qs::qsave(tm, here_input("actel", "tm.qs"))
 toc()
 
