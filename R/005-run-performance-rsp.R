@@ -29,9 +29,9 @@ library(tictoc)
 dv::src()
 
 #### Load data
-spatw      <- readRDS(here_input("spatw.rds"))
-spat_llw   <- terra::wrap(terra::rast(here_input("spat_ll_dbb.tif")))
-tm         <- qs::qread(here_input("actel", "tm.qs"))
+spatw        <- readRDS(here_input("spatw.rds"))
+spat_ll_dbbw <- terra::wrap(terra::rast(here_input("spat_ll_dbb.tif")))
+tm           <- qs::qread(here_input("actel", "tm.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
@@ -49,14 +49,13 @@ success <-
             print(sim$row)
             workflow_rsp(sim = sim,
                          spat = .chunkargs$spat,
-                         spat_ll = .chunkargs$spat_ll_dbb,
-                         spat_l
+                         spat_ll_dbb = .chunkargs$spat_ll_dbb,
                          tm = tm)
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
             list(spat = terra::unwrap(spatw),
-                 spat_ll_dbb = terra::unwrap(spat_ll_dbb))
+                 spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
           },
           .cl = NULL)
 toc()
