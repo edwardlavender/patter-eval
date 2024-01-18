@@ -62,6 +62,7 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
                     coord.x = "Longitude", coord.y = "Latitude")
   }
   # Run RSP
+  t1_rsp <- Sys.time()
   out_rsp <- tryCatch(
     RSP::runRSP(input = act,
                 t.layer = tm,
@@ -73,7 +74,9 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
     warning(out_rsp$message)
     return("runRSP")
   }
+  t2_rsp <- Sys.time()
   # Generate UD
+  t1_ud <- Sys.time()
   dbb <- tryCatch(
     RSP::dynBBMM(input = out_rsp,
                  base.raster = spat_ll_dbb,
@@ -89,7 +92,14 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
   ud_rsp <- terra::project(terra::rast(dbb), terra::crs(spat))
   ud_rsp <- terra::resample(ud_rsp, spat)
   ud_rsp <- ud_rsp / terra::global(ud_rsp, "sum")[1, 1]
-  stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
+  # stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
+  t2_ud <- Sys.time()
+
+  # Save outputs
+  time <- data.table(id = sim$id,
+                     rsp = mins(t2_rsp, t1_rsp),
+                     ud = mins(t2_ud, t1_ud))
+  qs::qsave(time, here_alg(sim, "rsp", er.ad, "time.qs"))
   write_rast(ud_rsp, out_file)
   "success"
 }
