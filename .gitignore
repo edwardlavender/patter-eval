@@ -8,6 +8,7 @@ data/*
 dev/03-secrets.R
 R/dev/
 R/deprecated/
+Stan/
 bin/
 doc/
 fig/
