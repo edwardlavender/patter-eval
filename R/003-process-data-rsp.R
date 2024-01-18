@@ -137,6 +137,15 @@ terra::plot(water)
 tm <- actel::transitionLayer(water, directions = 8L)
 terra::plot(raster::raster(tm))
 qs::qsave(tm, here_input("actel", "tm.qs"))
+# Define dynBBMM base.raster
+# * This needs to be larger
+# * Try 20 % expansion
+spat_ll_dbb <-
+  terra::setValues(spat, 1) |>
+  terra::extend(2e3L, fill = 1) |>
+  terra::project("EPSG:4326")
+terra::plot(spat_ll_dbb)
+terra::writeRaster(spat_ll_dbb, here_input("spat_ll_dbb.tif"), overwrite = TRUE)
 toc()
 
 

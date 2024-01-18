@@ -22,10 +22,10 @@ workflow_coa <- function(sim, spat, im, win) {
   NULL
 }
 
-workflow_rsp <- function(sim, spat, spat_ll, tm) {
-  s1 <- get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
+  s1 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
                    er.ad = er.ad.1)
-  s2 <- get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+  s2 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
                    er.ad = er.ad.2)
   data.frame(row = sim$row, rsp_1 = s1, rsp_2 = s2)
 }

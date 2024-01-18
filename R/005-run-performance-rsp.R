@@ -30,7 +30,7 @@ dv::src()
 
 #### Load data
 spatw      <- readRDS(here_input("spatw.rds"))
-spat_llw   <- terra::wrap(terra::rast(here_input("spat_ll.tif")))
+spat_llw   <- terra::wrap(terra::rast(here_input("spat_ll_dbb.tif")))
 tm         <- qs::qread(here_input("actel", "tm.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
@@ -42,19 +42,24 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
 gc()
 tic()
-cl_lapply(sims_for_performance_ls,
+success <-
+  cl_lapply(sims_for_performance_ls,
           .fun = function(sim, .chunkargs) {
             # sim <- sims_for_performance_ls[[1]]
             print(sim$row)
             workflow_rsp(sim = sim,
                          spat = .chunkargs$spat,
-                         spat_ll = .chunkargs$spat_ll,
+                         spat_ll = .chunkargs$spat_ll_dbb,
+                         spat_l
                          tm = tm)
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
             list(spat = terra::unwrap(spatw),
-                 spat_ll = terra::unwrap(spat_llw))
+                 spat_ll_dbb = terra::unwrap(spat_ll_dbb))
           },
           .cl = NULL)
 toc()
+
+# Check success
+rbindlist(success)

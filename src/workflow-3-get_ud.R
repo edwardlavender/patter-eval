@@ -47,14 +47,14 @@ get_ud_coa <- function(sim,
   ud_coa
 }
 
-get_ud_rsp <- function(sim, spat, spat_ll, tm, er.ad, overwrite = TRUE) {
+get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
   # Define outfile
   out_file <- here_alg(sim, "rsp", er.ad, "ud.tif")
   # Read actel
   act <- read_actel(sim)
   # Examine locations
   if (FALSE) {
-    water <- spat_ll > 0
+    water <- spat_ll_dbb > 0
     names(water) <- "layer"
     RSP::plotRaster(input = act,
                     base.raster = water,
@@ -75,7 +75,7 @@ get_ud_rsp <- function(sim, spat, spat_ll, tm, er.ad, overwrite = TRUE) {
   # Generate UD
   ud_rsp <- tryCatch(
     RSP::dynBBMM(input = out_rsp,
-                 base.raster = spat_ll,
+                 base.raster = spat_ll_dbb,
                  UTM = "1"),
     error = function(e) e)
   if (inherits(ud_rsp, "error")) {
