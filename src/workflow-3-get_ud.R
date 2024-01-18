@@ -47,26 +47,49 @@ get_ud_coa <- function(sim,
   ud_coa
 }
 
-get_ud_rsp <- function(sim, spat, spat_ll, tm, er.add, overwrite = TRUE) {
+get_ud_rsp <- function(sim, spat, spat_ll, tm, er.ad, overwrite = TRUE) {
   # Define outfile
-  out_file <- here_alg(sim, "rsp", er.add, "ud.tif")
+  out_file <- here_alg(sim, "rsp", er.ad, "ud.tif")
   # Read actel
   act <- read_actel(sim)
+  # Examine locations
+  if (FALSE) {
+    water <- spat_ll > 0
+    names(water) <- "layer"
+    RSP::plotRaster(input = act,
+                    base.raster = water,
+                    coord.x = "Longitude", coord.y = "Latitude")
+  }
   # Run RSP
-  out_rsp <- RSP::runRSP(input = act, t.layer = tm,
-                         coord.x = "Longitude", coord.y = "Latitude",
-                         er.ad = er.add)
+  out_rsp <- tryCatch(
+    RSP::runRSP(input = act,
+                t.layer = tm,
+                coord.x = "Longitude", coord.y = "Latitude",
+                er.ad = er.ad),
+    error = function(e) e)
+  if (inherits(out_rsp, "error")) {
+    warning("RSP::runRSP failure!")
+    warning(out_rsp$message)
+    return("runRSP")
+  }
   # Generate UD
-  ud_rsp <- RSP::dynBBMM(input = out_rsp,
-                         base.raster = spat_ll,
-                         UTM = "1")
+  ud_rsp <- tryCatch(
+    RSP::dynBBMM(input = out_rsp,
+                 base.raster = spat_ll,
+                 UTM = "1"),
+    error = function(e) e)
+  if (inherits(ud_rsp, "error")) {
+    warning("RSP::dynBBMM() failure!")
+    warning(ud_rsp$message)
+    return("dynBBMM")
+  }
   ud_rsp <- ud_rsp$dbbmm[[1]]
   # Resample RSP onto spat grid for consistency
   ud_rsp <- raster::resample(ud_rsp, spat)
   ud_rsp <- ud_rsp / terra::global(ud_rsp, "sum")[1, 1]
   stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
   write_rast(ud_rsp, out_file)
-  NULL
+  "success"
 }
 
 get_ud_patter <- function(sim,

@@ -23,11 +23,11 @@ workflow_coa <- function(sim, spat, im, win) {
 }
 
 workflow_rsp <- function(sim, spat, spat_ll, tm) {
-  get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
-             er.ad = er.ad.1)
-  get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
-             er.ad = er.ad.2)
-  NULL
+  s1 <- get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+                   er.ad = er.ad.1)
+  s2 <- get_ud_rsp(sim = sim, spat = spat, spat_ll = spat_ll, tm = tm,
+                   er.ad = er.ad.2)
+  data.frame(row = sim$row, rsp_1 = s1, rsp_2 = s2)
 }
 
 workflow_patter <- function(sim, spat, im, win) {
