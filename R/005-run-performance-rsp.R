@@ -40,6 +40,12 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
+# Timings
+# - ETA:
+# * 82 s per simulation (~13 h on one cl)
+# - Outcome:
+#
+
 gc()
 tic()
 success <-
@@ -48,11 +54,12 @@ success <-
             # sim <- sims_for_performance_ls[[1]]
             print(sim$row)
             tic()
-            workflow_rsp(sim = sim,
-                         spat = .chunkargs$spat,
-                         spat_ll_dbb = .chunkargs$spat_ll_dbb,
-                         tm = tm)
+            success <- workflow_rsp(sim = sim,
+                                    spat = .chunkargs$spat,
+                                    spat_ll_dbb = .chunkargs$spat_ll_dbb,
+                                    tm = tm)
             toc()
+            success
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
