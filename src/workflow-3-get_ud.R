@@ -66,10 +66,13 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
                t.layer = tm,
                coord.x = "Longitude", coord.y = "Latitude")
   if (type == "custom") {
-    args$distance   <- 100
-    args$time.step  <- 0.4
-    args$min.time   <- 2
-    args$er.ad      <- 100
+    # dynBBMM() is sensitive to raster area
+    # * Larger er.ad appears to require larger areas
+    # * Hence small modification of er.ad argument only
+    # args$distance   <- 100
+    # args$time.step  <- 0.4
+    # args$min.time   <- 2
+    args$er.ad        <- 250 * 0.10
   }
   # Run RSP
   t1_rsp <- Sys.time()
