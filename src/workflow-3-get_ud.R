@@ -106,7 +106,7 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
   time <- data.table(id = sim$id,
                      rsp = mins(t2_rsp, t1_rsp),
                      ud = mins(t2_ud, t1_ud))
-  qs::qsave(time, here_alg(sim, "rsp", er.ad, "time.qs"))
+  qs::qsave(time, here_alg(sim, "rsp", type, "time.qs"))
   write_rast(ud_rsp, out_file)
   "success"
 }
