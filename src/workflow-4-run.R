@@ -26,7 +26,7 @@ workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
   s1 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
                    type = "default")
   s2 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
-                   er.ad = "custom")
+                   type = "custom")
   data.frame(row = sim$row, rsp_1 = s1, rsp_2 = s2)
 }
 
