@@ -47,10 +47,10 @@ get_ud_coa <- function(sim,
   ud_coa
 }
 
-get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
-  # er.ad <- er.ad.1
+get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom"), overwrite = TRUE) {
   # Define outfile
-  out_file <- here_alg(sim, "rsp", er.ad, "ud.tif")
+  type <- match.arg(type)
+  out_file <- here_alg(sim, "rsp", type, "ud.tif")
   # Read actel
   act <- read_actel(sim)
   # Examine locations
@@ -61,13 +61,20 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, er.ad, overwrite = TRUE) {
                     base.raster = water,
                     coord.x = "Longitude", coord.y = "Latitude")
   }
+  # Define RSP args
+  args <- list(input = act,
+               t.layer = tm,
+               coord.x = "Longitude", coord.y = "Latitude")
+  if (type == "custom") {
+    args$distance   <- 100
+    args$time.step  <- 0.4
+    args$min.time   <- 2
+    args$er.ad      <- 100
+  }
   # Run RSP
   t1_rsp <- Sys.time()
   out_rsp <- tryCatch(
-    RSP::runRSP(input = act,
-                t.layer = tm,
-                coord.x = "Longitude", coord.y = "Latitude",
-                er.ad = er.ad),
+    do.call(RSP::runRSP, args),
     error = function(e) e)
   if (inherits(out_rsp, "error")) {
     warning("RSP::runRSP failure!")
