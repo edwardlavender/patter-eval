@@ -62,7 +62,7 @@ success <-
                  spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
             .chunkargs
           },
-          .cl = NULL)
+          .cl = 20L)
 toc()
 
 #### Record success
