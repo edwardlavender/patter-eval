@@ -177,6 +177,7 @@ get_ud_patter <- function(sim,
   out_pfbs <- pf_backward_sampler(.history = copy(out_pff$history),
                                   .obs = NULL,
                                   .dlist = dlist,
+                                  .dargs = margs,
                                   .record = record,
                                   .verbose = FALSE
                                   )
