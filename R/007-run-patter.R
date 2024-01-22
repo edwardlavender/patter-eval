@@ -48,7 +48,7 @@ sims <- sims_for_performance
 
 #### Set up cluster
 # Number of forks
-cl <- 10L
+cl <- 50L
 # Define chunks to iterate over in parallel
 chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
