@@ -41,7 +41,7 @@ workflow_patter <- function(sim, spat, im, win) {
   # Define observation timeline
   # * Note that sim$mobility has been adjusted for spat resolution (see sim-data.R)
   obs <- pf_setup_obs(.dlist = dlist,
-                      .trim = TRUE,
+                      .trim = FALSE,
                       .step = paste(sim$step, "mins"),
                       .mobility = sim$mobility,
                       .receiver_range = dlist$data$moorings$receiver_range[1])
