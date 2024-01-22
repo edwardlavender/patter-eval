@@ -35,6 +35,7 @@ dv::src()
 
 # Data directories
 dir.create(here_data())
+dir.create(here_data("rsync"))
 dir.create(here_data("sims"))
 dir.create(here_data("sims", "input"))
 dir.create(here_data("sims", "output"))
