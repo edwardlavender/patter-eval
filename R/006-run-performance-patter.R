@@ -41,6 +41,8 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Estimate UDs
 
 #### Define sims
+# * sims_for_performance
+# * sims_for_sensitivity
 sims <- sims_for_performance
 
 #### Set up cluster
@@ -51,7 +53,7 @@ chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
 # Create a log file for each chunk
 lapply(seq_len(nchunks), function(i) {
-  file.create(here_output("logs", paste0("log-", i, ".txt")))
+  file.create(here_output("log", "patter", paste0("log-", i, ".txt")))
 }) |> invisible()
 
 #### Time trials
@@ -70,7 +72,7 @@ success <-
 
     #### Set up chunk
     # Logs
-    log.txt <- here_output("logs", paste0("log-", i, ".txt"))
+    log.txt <- here_output("log", "patter", paste0("log-", i, ".txt"))
     cat_log <- patter:::cat_init(.verbose = log.txt)
     # rstudioapi::navigateToFile(log.txt)
     cat_log(paste("CHUNK" , i, "\n"))
