@@ -48,7 +48,7 @@ get_ud_coa <- function(sim,
 }
 
 get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom"),
-                       overwrite = FALSE) {
+                       overwrite = TRUE) {
   # Define outfile
   type <- match.arg(type)
   out_file <- here_alg(sim, "rsp", type, "ud.tif")
