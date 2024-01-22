@@ -185,6 +185,31 @@
       ],
       "Hash": "5ea2700d21e038ace58269ecdbeb9ec0"
     },
+    "RcppArmadillo": {
+      "Package": "RcppArmadillo",
+      "Version": "0.12.6.6.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "Hash": "d2b60e0a15d73182a3a766ff0a7d0d7f"
+    },
+    "RcppGSL": {
+      "Package": "RcppGSL",
+      "Version": "0.3.13",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "Rcpp",
+        "stats"
+      ],
+      "Hash": "e8fc7310d256a7b6c4de8e57ab76c55d"
+    },
     "RcppParallel": {
       "Package": "RcppParallel",
       "Version": "5.1.7",
@@ -194,6 +219,36 @@
         "R"
       ],
       "Hash": "a45594a00f5dbb073d5ec9f48592a08a"
+    },
+    "RcppZiggurat": {
+      "Package": "RcppZiggurat",
+      "Version": "0.1.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "RcppGSL",
+        "graphics",
+        "parallel",
+        "stats",
+        "utils"
+      ],
+      "Hash": "75b4a36aeeed440ad03b996081190703"
+    },
+    "Rfast": {
+      "Package": "Rfast",
+      "Version": "2.1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "RcppArmadillo",
+        "RcppParallel",
+        "RcppZiggurat"
+      ],
+      "Hash": "79e8394e1fa06a4ae954b70ca9b16e8f"
     },
     "TeachingDemos": {
       "Package": "TeachingDemos",
@@ -766,6 +821,20 @@
         "methods"
       ],
       "Hash": "daf4a1246be12c1fa8c7705a0935c1a0"
+    },
+    "exactextractr": {
+      "Package": "exactextractr",
+      "Version": "0.10.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "methods",
+        "raster",
+        "sf"
+      ],
+      "Hash": "3db813596387e90573ad092d5e3fde37"
     },
     "fansi": {
       "Package": "fansi",
@@ -1691,14 +1760,14 @@
     },
     "ps": {
       "Package": "ps",
-      "Version": "1.7.5",
+      "Version": "1.7.6",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "R",
         "utils"
       ],
-      "Hash": "709d852d33178db54b17c722e5b1e594"
+      "Hash": "dd2b9319ee0656c8acf45c7f40c59de7"
     },
     "purrr": {
       "Package": "purrr",
@@ -2369,14 +2438,14 @@
     },
     "timechange": {
       "Package": "timechange",
-      "Version": "0.2.0",
+      "Version": "0.3.0",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Requirements": [
         "R",
         "cpp11"
       ],
-      "Hash": "8548b44f79a35ba1791308b61e6012d7"
+      "Hash": "c5f3c201b931cd6474d17d8700ccb1c8"
     },
     "tinytex": {
       "Package": "tinytex",
@@ -2625,6 +2694,21 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "d98c94dacb7e0efcf83b0a133a705504"
+    },
+    "zoo": {
+      "Package": "zoo",
+      "Version": "1.8-12",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "lattice",
+        "stats",
+        "utils"
+      ],
+      "Hash": "5c715954112b45499fb1dadc6ee6ee3e"
     }
   }
 }
