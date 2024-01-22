@@ -32,9 +32,23 @@ if (!requireNamespace("rmarkdown", quietly = TRUE))
   renv::install("rmarkdown", prompt = FALSE)
 if (!requireNamespace("yaml", quietly = TRUE))
   renv::install("yaml", prompt = FALSE)
+# Explicitly register {patter} suggests
+if (!requireNamespace("exactextractr", quietly = TRUE))
+  renv::install("exactextractr", prompt = FALSE)
+if (!requireNamespace("geosphere", quietly = TRUE))
+  renv::install("geosphere", prompt = FALSE)
+if (!requireNamespace("Rfast", quietly = TRUE))
+  renv::install("Rfast", prompt = FALSE)
+if (!requireNamespace("spatstat.explore", quietly = TRUE))
+  renv::install("spatstat.explore", prompt = FALSE)
+if (!requireNamespace("spatstat.geom", quietly = TRUE))
+  renv::install("spatstat.geom", prompt = FALSE)
+if (!requireNamespace("sf", quietly = TRUE))
+  renv::install("sf", prompt = FALSE)
+if (!requireNamespace("zoo", quietly = TRUE))
+  renv::install("zoo", prompt = FALSE)
 
 #### Use dv templates
-
 # Set up template project structure
 dv::use_template_proj()
 
