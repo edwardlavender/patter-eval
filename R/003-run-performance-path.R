@@ -40,8 +40,7 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
-# ~ 30 s, 10 cl
-
+#### Run workflow (~30 s, 10 cl)
 gc()
 tic()
 cl_lapply(sims_for_performance_ls,
@@ -58,6 +57,13 @@ cl_lapply(sims_for_performance_ls,
           },
           .cl = 10L)
 toc()
+
+#### Quick checks
+if (interactive()) {
+  s <- sims_for_performance_ls[[10]]
+  pp <- par(mfrow = c(1, 3))
+  here_alg(s, "path", "ud.tif")  |> terra_qplot()
+}
 
 
 #### End of code.
