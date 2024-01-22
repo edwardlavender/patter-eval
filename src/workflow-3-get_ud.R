@@ -47,10 +47,14 @@ get_ud_coa <- function(sim,
   ud_coa
 }
 
-get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom"), overwrite = TRUE) {
+get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom"),
+                       overwrite = FALSE) {
   # Define outfile
   type <- match.arg(type)
   out_file <- here_alg(sim, "rsp", type, "ud.tif")
+  if (!overwrite && file.exists(out_file)) {
+    return("exists")
+  }
   # Read actel
   act <- read_actel(sim)
   # Examine locations
