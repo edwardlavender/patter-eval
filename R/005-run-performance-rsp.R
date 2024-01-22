@@ -40,12 +40,7 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
-# Timings
-# - ETA:
-# * 82 s per simulation (~13 h on one cl)
-# - Outcome:
-#
-
+#### Run workflow (~13 h on one cl)
 gc()
 tic()
 success <-
@@ -70,20 +65,24 @@ success <-
           .cl = NULL)
 toc()
 
-# Check success
-rbindlist(success)
+#### Record success
+sdt <- rbindlist(success)
+saveRDS(sdt, here_data("sims", "output", "success", "rsp.rds"))
 
-# Check
-s <- sims_for_performance_ls[[1]]
-pp <- par(mfrow = c(2, 3))
-here_alg(s, "path", "ud.tif")  |> terra_qplot()
-here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
-here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
-here_alg(s, "rsp", "default", "ud.tif") |> terra_qplot()
-here_alg(s, "rsp", "custom", "ud.tif") |> terra_qplot()
-m <- read_array(s)
-points(m$receiver_easting, m$receiver_northing)
-par(pp)
+#### Quick checks
+if (interactive()) {
+  s <- sims_for_performance_ls[[1]]
+  pp <- par(mfrow = c(2, 3))
+  here_alg(s, "path", "ud.tif")  |> terra_qplot()
+  here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
+  here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
+  here_alg(s, "rsp", "default", "ud.tif") |> terra_qplot()
+  here_alg(s, "rsp", "custom", "ud.tif") |> terra_qplot()
+  m <- read_array(s)
+  points(m$receiver_easting, m$receiver_northing)
+  par(pp)
+}
+
 
 
 #### End of code.
