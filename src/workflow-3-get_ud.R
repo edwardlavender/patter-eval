@@ -173,6 +173,7 @@ get_ud_patter <- function(sim,
 
   #### Backward sampler
   t1_pfbs  <- Sys.time()
+  ssf()
   out_pfbs <- pf_backward_sampler(.history = out_pff$history,
                                   .obs = NULL,
                                   .dlist = dlist,
