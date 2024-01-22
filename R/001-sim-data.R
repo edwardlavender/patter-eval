@@ -43,6 +43,7 @@ dir.create(here_data("sims", "output", "log", "patter"))
 dir.create(here_data("sims", "output", "log", "server"))
 dir.create(here_data("sims", "output", "run"))
 dir.create(here_data("sims", "output", "skill"))
+dir.create(here_data("sims", "output", "success"))
 dir.create(here_data("sims", "output", "synthesis"))
 
 
