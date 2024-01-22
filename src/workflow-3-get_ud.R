@@ -30,7 +30,7 @@ get_ud_coa <- function(sim,
   acoustics <- dlist$data$acoustics
   if (secs(max(acoustics$timestamp), min(acoustics$timestamp)) <=
       as.numeric(lubridate::duration(delta_t))) {
-    return(NULL)
+    return(FALSE)
   }
   out_coa <- coa(.dlist = dlist,
                  .delta_t = delta_t,
@@ -44,7 +44,7 @@ get_ud_coa <- function(sim,
              .verbose = FALSE,
              sigma = sigma)
   write_rast(ud_coa, out_file)
-  ud_coa
+  TRUE
 }
 
 get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom"),

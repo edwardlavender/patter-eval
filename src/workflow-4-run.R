@@ -13,13 +13,13 @@ workflow_path <- function(sim, spat, im, win) {
 
 workflow_coa <- function(sim, spat, im, win) {
   dlist <- read_dlist(sim)
-  get_ud_coa(sim = sim, spat = spat,
-             dlist = dlist, delta_t = "30 mins",
-             im = im, win = win)
-  get_ud_coa(sim = sim, spat = spat,
-             dlist = dlist, delta_t = "120 mins",
-             im = im, win = win)
-  NULL
+  s1 <- get_ud_coa(sim = sim, spat = spat,
+                   dlist = dlist, delta_t = "30 mins",
+                   im = im, win = win)
+  s2 <- get_ud_coa(sim = sim, spat = spat,
+                   dlist = dlist, delta_t = "120 mins",
+                   im = im, win = win)
+  data.frame(row = sim$row, coa_1 = s1, coa_2 = s2)
 }
 
 workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
