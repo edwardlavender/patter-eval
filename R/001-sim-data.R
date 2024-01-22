@@ -54,13 +54,14 @@ dir.create(here_data("sims", "output", "synthesis"))
 # We define a simple rectangular study site
 # * We formerly used a 5 m grid
 # * A 10 m grid is MUCH faster for most routines
+# * And resultant UDs occupy less disk space
 spat <- spatTemplate(.res = 10,
                      .value = 1,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
                      .crs = "+proj=utm +zone=1 +datum=WGS84")
 terra::ncell(spat)
-# Define blank SpatRaster
+# Define uniform ('blank') SpatRaster
 # (used as a NULL model)
 spat <- spat / terra::global(spat, "sum")[1, 1]
 terra::writeRaster(spat, here_input("blank.tif"), overwrite = TRUE)
@@ -71,7 +72,8 @@ spat    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
                            spat,
                            values = g$depth)
 names(spat) <- "bathy"
-# Write SpatRaster
+# Write SpatRaster(s)
+# * Include wrapped version for parallelised routines
 saveRDS(terra::wrap(spat), here_input("spatw.rds"))
 terra::writeRaster(spat, here_input("spat.tif"), overwrite = TRUE)
 ext <- terra::ext(spat)
@@ -80,7 +82,7 @@ terra::ncell(spat)
 #### Define study period
 # Define number of days
 n_days  <- 2
-# Define number to two minute time steps in n_days
+# Define number of two minute time steps in n_days
 step    <- "2 mins"
 n_steps <- 60/2*24 * n_days
 period  <- seq.POSIXt(as.POSIXct("2023-01-01", tz = "UTC"),
@@ -95,11 +97,11 @@ range(period)
 
 # We will simulate:
 # * one 'study'          (one area, one time series)
-# * n_systems            (different detection probability parameters)
-# * n_arrays             (different arrays)
-# * n_array_realisations (different realisations)
-# * n_paths              (different movement parameters, one type per system)
-# * n_path_realisations  (different realisations)
+# * n_systems            (different detection probability parameters; n = 2)
+# * n_arrays             (different arrays; n = 20)
+# * n_array_realisations (different realisations; n = 1)
+# * n_paths              (different movement parameters, one type per system; n = 2)
+# * n_path_realisations  (different realisations; n = 30)
 # * simulated dataset for each array/path realisation
 
 # We then generate:
@@ -117,13 +119,22 @@ range(period)
 # * Receiver number (5, 10, 15, ...)
 
 #### Define detection pars
-detection_pars <- data.table(alpha = 4,
-                             beta = -0.01,
-                             gamma = 750)
+detection_pars <- data.table(alpha = c(4, 5),
+                             beta = c(-0.01, -0.025),
+                             gamma = c(750, 500))
+# Visualise detection probability function
+i <- 2
+x <- seq(0, 1000, by = 1)
+y <- ddetlogistic(x,
+                  .alpha = detection_pars$alpha[i],
+                  .beta = detection_pars$beta[i],
+                  .gamma = detection_pars$gamma[i])
+plot(x, y, type = "l")
+# Define the number of systems
 n_systems <- nrow(detection_pars)
 
 #### Define array parameters (receiver number, arrangement)
-# The number of receivers is chosen such that we have very to ~100 % coverage
+# The number of receivers is chosen such that we have low to close to ~100 % coverage
 # (at least within receiver detection ranges)
 array_pars <-
   CJ(arrangement = c("regular", "random"),
@@ -133,7 +144,7 @@ array_pars <-
   as.data.table()
 
 #### Simulate arrays
-# We simulate n_array designs
+# We simulate n_array designs, as defined by the parameters above (one realisation of each)
 # We hold array designs constant across different detection probability parameters
 n_array              <- nrow(array_pars)
 n_array_realisations <- 1L
@@ -157,7 +168,7 @@ head(arrays[[1]])
 toc()
 saveRDS(arrays, here_input("arrays.rds"))
 
-#### Examine range in array coverage
+#### Examine range in array coverage (~5 s)
 coverage <-
   lapply(split(detection_pars, seq_len(nrow(detection_pars))), function(d) {
     pbapply::pblapply(seq_len(length(arrays)), function(i) {
@@ -181,8 +192,8 @@ coverage <-
                  pc = (area_in_containers / area_total) * 100)
     }) |> rbindlist()
   })
-coverage[[1]]
-range(coverage[[1]]$pc)
+coverage[[1]]; coverage[[2]]
+range(coverage[[1]]$pc); range(coverage[[2]]$pc)
 
 
 #########################
@@ -190,14 +201,27 @@ range(coverage[[1]]$pc)
 #### Simulate movement
 
 #### Define path parameters
-# For each system (set of detection_pars), we consider one path type
+# For each system (set of detection_pars), we consider one path type.
+# For convenience, we assume:
+# * Gamma distribution of step lengths (with varying parameters)
+# * Default settings for turning angles
 # (We examine algorithm performance for each pair of system/path types
 # ... since we only simulate multiple systems/paths to check the validity
 # ... of conclusions, we do not consider all combinations of systems/paths,
 # ... to reduce the number of simulations required & to improve speed)
-path_pars <- data.table(mobility = 500,
-                        shape = 15,
-                        scale = 15)
+path_pars <- data.table(mobility = c(500, 750),
+                        shape = c(1, 15),
+                        scale = c(250, 15))
+# Examine simulated paths
+i <- 1L
+hist(rtruncgamma(.n = 1e5,
+                 .shape = path_pars$shape[i],
+                 .scale = path_pars$scale[i],
+                 .mobility = path_pars$mobility[i]),
+     xlim = c(0, path_pars$mobility[i]),
+     breaks = 100,
+     xlab = "Step length",
+     main = i)
 
 #### Simulate paths & associated observations (e.g., depths)
 # We simulate n_path types
@@ -246,9 +270,9 @@ saveRDS(paths, here_input("paths.rds"))
 #   * One element for each array design
 #       * One data.table with detections for all array/path realisation
 
-#### Simulate detections (~13 s)
+#### Simulate detections (~33 s)
 pairs <- CJ(a = seq_len(n_array_realisations),
-                     p = seq_len(n_path_realisations))
+            p = seq_len(n_path_realisations))
 pairs$key <- paste(pairs$a, pairs$p)
 tic()
 ssf()
@@ -257,8 +281,8 @@ detections <-
     d <- detection_pars[i, , drop = FALSE]
     .paths <- paths[[i]]
     lapply(seq_len(n_array), function(j) {
-      sim <- sim_detections(.paths = .paths,
-                            .arrays = arrays[[j]],
+      sim <- sim_detections(.paths = copy(.paths),
+                            .arrays = copy(arrays[[j]]),
                             .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
                             .type = "combinations",
                             .return = c("array_id", "path_id",
@@ -275,13 +299,6 @@ detections <-
     })
   })
 toc()
-# The following combinations do not yield detections:
-# [1] 1  - combination 1
-# [1] 11 - array 11
-# array/path realisation:
-#    a  p key
-# 28 1 28 1 28
-detections[[1]][[11]][path_id == 28, ]
 
 #### Drop realisations without sufficient detections
 # Not all array/path realisations may generate detections
@@ -326,7 +343,7 @@ alg_pars <-
       ppar <- path_pars[i, , drop = FALSE]
       pars <- cbind(dpar, ppar[])
       # Add algorithm control defaults
-      pars$step     <- alg_controls$step     # in mins
+      pars$step        <- alg_controls$step # in mins
       pars$n_particles <- alg_controls$n_particles
       pars$flag        <- "defaults"
 
@@ -347,7 +364,7 @@ alg_pars <-
             vals <- c(2, 4, 8)
           }
           if (x == "n_particles") {
-            vals <- c(100, 500, 1000, 5000)
+            vals <- c(100, 500, 1000, 2000)
           }
           dp <- data.table(x = vals)
           colnames(dp) <- x
@@ -363,8 +380,8 @@ alg_pars <-
           # (to account for the longer duration)
           if (x == "step") {
             for (v in vals) {
-              dp$mobility[i] <- dp$mobility[i] * (dp$step[i] / 2)
-              dp$shape[i]    <- dp$shape[i] * (dp$step[i] / 2)
+              dp$mobility[i] <- dp$mobility[i] * (dp$step[i] / alg_controls$step)
+              dp$shape[i]    <- dp$shape[i] * (dp$step[i] / alg_controls$step)
             }
           }
 
@@ -377,7 +394,7 @@ alg_pars <-
       #### Change gamma and mobility simultaneously
       # (while holding other parameters constant)
       gm <- CJ(gamma = unique(constants$gamma),
-                        mobility = unique(constants$mobility))
+               mobility = unique(constants$mobility))
       keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
       gm <- cbind(gm, pars[, ..keep])
       gm$index <- pars$index
