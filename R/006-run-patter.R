@@ -1,9 +1,9 @@
 #########################
 #########################
-#### run-performance-patter.R
+#### run-patter.R
 
 #### Aims
-# 1) Estimate UDs using patter for performance simulations (correct parameters)
+# 1) Estimate UDs using patter (for performance & sensitivity simulations)
 
 #### Prerequisites
 # 1) Simulate data & prepare for algorithm implementation
@@ -41,9 +41,10 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Estimate UDs
 
 #### Define sims
-# * sims_for_performance
-# * sims_for_sensitivity
+type <- "performance"
 sims <- sims_for_performance
+# type <- "sensitivity"
+# sims <- sims_for_sensitivity
 
 #### Set up cluster
 # Number of forks
@@ -53,7 +54,7 @@ chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
 # Create a log file for each chunk
 lapply(seq_len(nchunks), function(i) {
-  file.create(here_output("log", "patter", paste0("log-", i, ".txt")))
+  file.create(here_output("log", "patter", type, paste0("log-", i, ".txt")))
 }) |> invisible()
 
 #### Time trials
@@ -63,11 +64,11 @@ guess <- 30 # 30 s
 (nrow(sims) * 30)/60/60/24/cl # days
 
 #### Timing
-# * ~2 hour 12 mins, 10 cl
+# * One system: ~2 hour 12 mins, 10 cl
 
 #### Implementation
 gc()
-success <-
+sdt <-
   pbapply::pblapply(seq_len(nchunks), cl = cl, function(i) {
 
     #### Set up chunk
@@ -88,13 +89,13 @@ success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
         cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
-        .success <- workflow_patter(sim = sim,
-                                    spat = spat,
-                                    im = im,
-                                    win = win)
+        s <- workflow_patter(sim = sim,
+                             spat = spat,
+                             im = im,
+                             win = win)
         t2 <- Sys.time()
         cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))
-        .success
+        s
       }) |> rbindlist()
     t2_chunk <- Sys.time()
 
@@ -105,33 +106,37 @@ success <-
     sink()
     success
 
-  }) |> rbindlist()
+  })
 
-#### Validate convergence
-success
-table(success$acpf)
-table(success$acdcpf)
+
+#### Record success
+sdt <- rbindlist(sdt)
+saveRDS(sdt, here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
 
 
 #########################
 #########################
 #### Quick visuals
 
-qplot <- function(file) {
-  terra_qplot(file)
-  p <- read_path(sim)
-  prettyGraphics::add_sp_path(p$x, p$y, length = 0, lwd = 0.1)
-  m <- read_array(sim)
-  points(m$receiver_easting, m$receiver_northing)
-}
+if (interactive()) {
 
-sim <- sims[3, ]
-pp <- par(mfrow = c(2, 2))
-qplot(here_alg(sim, "path", "ud.tif"))
-qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
-qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
-par(pp)
+  qplot <- function(file) {
+    terra_qplot(file)
+    p <- read_path(sim)
+    prettyGraphics::add_sp_path(p$x, p$y, length = 0, lwd = 0.1)
+    m <- read_array(sim)
+    points(m$receiver_easting, m$receiver_northing)
+  }
+
+  sim <- sims[3, ]
+  pp <- par(mfrow = c(2, 2))
+  qplot(here_alg(sim, "path", "ud.tif"))
+  qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
+  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
+  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
+  par(pp)
+
+}
 
 
 #### End of code.
