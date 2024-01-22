@@ -12,6 +12,7 @@ Stan/
 bin/
 doc/
 fig/
+backup/
 *.html
 *.pdf
 *.docx
