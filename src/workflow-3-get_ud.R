@@ -124,9 +124,11 @@ get_ud_patter <- function(sim,
                           sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE) {
 
-  out_file <- here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif")
-  if (!overwrite && file.exists(out_file)) {
-    return(1L)
+  #### (optional) Prior convergence check
+  out_file_convergence <-
+    here_alg(sim, "patter", algorithm, sim$alg_par, "convergence.rds")
+  if (!overwrite && file.exists(out_file_convergence)) {
+    return(readRDS(out_file_convergence))
   }
 
   #### Define simulation arguments
@@ -157,45 +159,72 @@ get_ud_patter <- function(sim,
                         .record = record,
                         .verbose = FALSE)
   t2_pff <- Sys.time()
+  saveRDS(out_pff$convergence, out_file_convergence)
   if (!out_pff$convergence) {
-    return(0L)
+    return(FALSE)
   }
 
   #### Backward killer
-  t1_pfbk <- Sys.time()
-  out_pfbk <- pf_backward_killer(out_pff$history,
+  t1_pfbk  <- Sys.time()
+  out_pfbk <- pf_backward_killer(.history = out_pff$history,
                                  .record = record,
                                  .verbose = FALSE)
-  t2_pfbk <- Sys.time()
+  t2_pfbk  <- Sys.time()
 
   #### Backward sampler
-  # TO DO
+  t1_pfbs  <- Sys.time()
+  out_pfbs <- pf_backward_sampler(.history = out_pff$history,
+                                  .obs = NULL,
+                                  .dlist = dlist,
+                                  .record = record,
+                                  .verbose = FALSE
+                                  )
+  t2_pfbs  <- Sys.time()
 
-  #### Smoothing (backward killer)
-  t1_udk   <- Sys.time()
-  udk <- map_dens(.map = spat,
-                  .im = im,
-                  .win = win,
-                  .coord = pf_coord(.history = out_pfbk$history, .bathy = spat),
-                  .plot = FALSE,
-                  .verbose = FALSE,
-                  sigma = sigma)
-  t2_udk <- Sys.time()
+  #### Map arguments
+  map_args <- list(.map = spat,
+                   .im = im,
+                   .win = win,
+                   .plot = FALSE,
+                   .verbose = FALSE,
+                   sigma = sigma)
 
-  #### Smoothing (backward sampler)
-  # TO DO
+  #### Mapping (forward run)
+  map_args$.coord <- pf_coord(.history = out_pff$history, .bathy = spat)
+  t1_udf          <- Sys.time()
+  do.call(map_dens, map_args)
+  t2_udf          <- Sys.time()
+
+  #### Mapping (backward killer)
+  map_args$.coord <- NULL
+  map_args$.coord <- pf_coord(.history = out_pfbk$history, .bathy = spat)
+  t1_udk          <- Sys.time()
+  do.call(map_dens, map_args)
+  t2_udk          <- Sys.time()
+
+  #### Mapping (backward sampler)
+  map_args$.coord <- NULL
+  map_args$.coord <- pf_coord(.history = out_pfbs$history, .bathy = spat)
+  t1_uds          <- Sys.time()
+  do.call(map_dens, map_args)
+  t2_uds          <- Sys.time()
 
   #### Outputs
   # Timings
   time <- data.table(id = sim$id,
                      pff = mins(t2_pff, t1_pff),
                      pfbk = mins(t2_pfbk, t1_pfbk),
-                     pfbs = NA,
-                     ud = mins(t2_udk, t1_udk))
+                     pfbs = mins(t2_pfbs, t2_pfbs),
+                     udf = mins(t2_udf, t1_udf),
+                     udk = mins(t2_udk, t1_udk),
+                     uds = mins(t2_uds, t2_uds))
+
   qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
   # qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
   # UD
-  write_rast(udk, out_file)
-  return(1L)
+  write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
+  write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
+  write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
+  return(TRUE)
 }
