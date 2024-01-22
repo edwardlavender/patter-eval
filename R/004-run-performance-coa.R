@@ -40,34 +40,39 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
-# ~25 s
-
+#### Run workflow (~25 s)
 gc()
 tic()
-cl_lapply(sims_for_performance_ls,
-          .fun = function(sim, .chunkargs) {
-            # sim <- sims_for_performance_ls[[1]]
-            print(sim$row)
-            workflow_coa(sim = sim,
-                         spat = .chunkargs$spat,
-                         im = im, win = win)
-          },
-          .chunk = TRUE,
-          .chunk_fun = function(sim) {
-            list(spat = terra::unwrap(spatw))
-          },
-          .cl = 10L)
+success <- cl_lapply(sims_for_performance_ls,
+                     .fun = function(sim, .chunkargs) {
+                       # sim <- sims_for_performance_ls[[1]]
+                       print(sim$row)
+                       workflow_coa(sim = sim,
+                                    spat = .chunkargs$spat,
+                                    im = im, win = win)
+                     },
+                     .chunk = TRUE,
+                     .chunk_fun = function(sim) {
+                       list(spat = terra::unwrap(spatw))
+                     },
+                     .cl = 10L)
 toc()
 
+#### Record success
+sdt <- rbindlist(success)
+saveRDS(sdt, here_data("sims", "output", "success", "coa.rds"))
+
 #### Quick checks
-s <- sims_for_performance_ls[[10]]
-pp <- par(mfrow = c(1, 3))
-here_alg(s, "path", "ud.tif")  |> terra_qplot()
-here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
-here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
-m <- read_array(s)
-points(m$receiver_easting, m$receiver_northing)
-par(pp)
+if (interactive()) {
+  s <- sims_for_performance_ls[[10]]
+  pp <- par(mfrow = c(1, 3))
+  here_alg(s, "path", "ud.tif")  |> terra_qplot()
+  here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
+  here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
+  m <- read_array(s)
+  points(m$receiver_easting, m$receiver_northing)
+  par(pp)
+}
 
 
 #### End of code.
