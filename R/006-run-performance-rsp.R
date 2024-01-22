@@ -62,8 +62,9 @@ success <-
                  spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
             .chunkargs
           },
-          .cl = 20L)
+          .cl = 50L)
 toc()
+beepr::beep(10L)
 
 #### Record success
 sdt <- rbindlist(success)
