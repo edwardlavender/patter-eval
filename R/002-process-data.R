@@ -94,7 +94,7 @@ pbapply::pblapply(sims_for_arrays_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Acoustics (~14 s)
+#### Acoustics (~14 * 2 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 sims_for_realisations <-
   sims |>
@@ -116,7 +116,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Paths (~11 s)
+#### Paths (~11 * 2 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   folder <- function(top) {
@@ -132,7 +132,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Data lists (~50 s)
+#### Data lists (~50 * 2 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation/gamma
 pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   # sim <- sims_for_realisations_ls[[1]]
@@ -159,6 +159,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
 #### Actel objects (~41 s)
 # This code has to be run non interactively to avoid prompts.
 tic()
+dir.create(here_data("sims", "input", "actel"))
 system("R CMD BATCH --no-save --no-restore ./R/003-process-data-rsp.R ./data/sims/input/actel/log.txt")
 toc()
 
