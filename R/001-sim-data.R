@@ -397,7 +397,6 @@ alg_pars <-
                mobility = unique(constants$mobility))
       keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
       gm <- cbind(gm, pars[, ..keep])
-      gm$index <- pars$index
       gm$flag <- "gm"
 
       #### Change beta and shape simultaneously
@@ -406,7 +405,6 @@ alg_pars <-
                         shape = unique(constants$shape))
       keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
       bs <- cbind(bs, pars[, ..keep])
-      bs$index <- pars$index
       bs$flag  <- "bs"
 
       #### Define all unique parameter sets
