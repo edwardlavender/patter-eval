@@ -31,6 +31,23 @@ dv::src()
 
 #########################
 #########################
+#### High-level directory structure
+
+# Data directories
+dir.create(here_data())
+dir.create(here_data("sims"))
+dir.create(here_data("sims", "input"))
+dir.create(here_data("sims", "output"))
+dir.create(here_data("sims", "output", "log"))
+dir.create(here_data("sims", "output", "log", "patter"))
+dir.create(here_data("sims", "output", "log", "server"))
+dir.create(here_data("sims", "output", "run"))
+dir.create(here_data("sims", "output", "skill"))
+dir.create(here_data("sims", "output", "synthesis"))
+
+
+#########################
+#########################
 #### Simulate study
 
 #### Define study site
