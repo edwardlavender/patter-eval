@@ -141,9 +141,9 @@ nrow(spat_xy)
 
 #### Precalculate densities (1)
 # Note that mobility is increased by one grid cell
+tic()
 if (TRUE) {
   gc()
-  tic()
   log.txt <- here_data("sims", "output", "log", "server",
                        "004-process-data-density-progress-1.txt")
   log.con <- log_open(log.txt)
@@ -159,13 +159,13 @@ if (TRUE) {
   .cl = cl)
   log_close(log.con)
   # rstudioapi::navigateToFile(log.txt)
-  toc()
 }
+toc()
 
 #### Precalculate densities (2)
+gc()
+tic()
 if (FALSE) {
-  gc()
-  tic()
   log.txt <- here_data("sims", "output", "log", "server",
                        "004-process-data-density-progress-2.txt")
   log.con <- log_open(log.txt)
@@ -181,8 +181,8 @@ if (FALSE) {
   .cl = cl)
   log_close(log.con)
   # rstudioapi::navigateToFile(log.txt)
-  toc()
 }
+toc()
 
 
 #### End of code.
