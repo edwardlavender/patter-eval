@@ -63,7 +63,7 @@ spat <- spatTemplate(.res = 10,
                      .value = 1,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
-                     .crs = "+proj=utm +zone=1 +datum=WGS84")
+                     .crs = crs)
 terra::ncell(spat)
 # Define uniform ('blank') SpatRaster
 # (used as a NULL model)
@@ -216,6 +216,7 @@ range(coverage[[1]]$pc); range(coverage[[2]]$pc)
 path_pars <- data.table(mobility = c(500, 750),
                         shape = c(1, 15),
                         scale = c(250, 15))
+saveRDS(path_pars, here_input("path_pars.rds"))
 # Examine simulated paths
 i <- 1L
 hist(rtruncgamma(.n = 1e5,
