@@ -6,8 +6,10 @@ log_open <- function(log.txt) {
     log.con <- file(log.txt, open = "wt")
     sink(log.con, type = "output")
     sink(log.con, type = "message")
+    invisible(log.con)
+  } else {
+   invisible(NULL)
   }
-  invisible(log.con)
 }
 
 log_close <- function(log.con) {
