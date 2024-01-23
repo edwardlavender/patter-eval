@@ -45,10 +45,15 @@ type <- "performance"
 sims <- sims_for_performance
 # type <- "sensitivity"
 # sims <- sims_for_sensitivity
+# (optional) Define test data subset
+test <- TRUE
+if (test) {
+  sims <- sims_for_performance[1:2L ]
+}
 
 #### Set up cluster
 # Number of forks
-cl <- 50L
+cl <- ifelse(test, 1L, 50L)
 # Define chunks to iterate over in parallel
 chunks  <- patter:::cl_chunks(cl, nrow(sims))
 nchunks <- length(chunks)
@@ -73,7 +78,7 @@ sdt <-
 
     #### Set up chunk
     # Logs
-    log.txt <- here_output("log", "patter", paste0("log-", i, ".txt"))
+    log.txt <- here_output("log", "patter", type, paste0("log-", i, ".txt"))
     cat_log <- patter:::cat_init(.verbose = log.txt)
     # rstudioapi::navigateToFile(log.txt)
     cat_log(paste("CHUNK" , i, "\n"))
@@ -87,6 +92,7 @@ sdt <-
     #### Run simulations for chunk
     success <-
       lapply(split(sims_for_chunk, seq_len(nrow(sims_for_chunk))), function(sim) {
+        # sim = sims_for_chunk[1, ]
         cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
         s <- workflow_patter(sim = sim,
