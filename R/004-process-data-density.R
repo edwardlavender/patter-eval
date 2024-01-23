@@ -130,7 +130,7 @@ spat_xy <- cbind(spat_dt$x, spat_dt$y)
 toc()
 
 #### Define test
-test <- TRUE
+test <- FALSE
 if (test) {
   spat_xy <- spat_xy[1:1000, ]
   cl <- 10L
