@@ -162,7 +162,7 @@ if (FALSE) {
 }
 toc()
 
-#### Precalculate densities (2)
+#### Precalculate densities (2): ~19 mins (50 cl)
 gc()
 tic()
 if (TRUE) {
