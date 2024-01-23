@@ -6,7 +6,7 @@ spatDens <- function(.spat, .xy, .shape, .scale, .mobility, file) {
   zone <-
     .xy |>
     terra::vect(crs = crs) |>
-    terra::buffer(width = .mobility, quadsegs = 1e3L) |>
+    terra::buffer(width = .mobility + sr, quadsegs = 1e3L) |>
     sf::st_as_sf()
 
   # Define probability density of movements into reachable cells
@@ -23,7 +23,7 @@ spatDens <- function(.spat, .xy, .shape, .scale, .mobility, file) {
            dens = dtruncgamma(.data$len,
                               .shape = .shape,
                               .scale = .scale,
-                              .mobility = .mobility)) |>
+                              .mobility = .mobility + sr)) |>
     # Retain only essential columns
     select("cell", "dens") |>
     as.data.table() |>

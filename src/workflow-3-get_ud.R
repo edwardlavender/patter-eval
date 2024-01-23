@@ -138,7 +138,10 @@ get_ud_patter <- function(sim,
 
   #### Define simulation arguments
   # Proposal function
-  margs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility)
+  # * Stochastic kicks are up to sim$mobility in length
+  # * In directed sampling we account for the discretisation error
+  rargs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility)
+  dargs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility + sr)
   # Likelihood functions
   algorithm <- match.arg(algorithm)
   if (algorithm == "acpf") {
@@ -157,8 +160,8 @@ get_ud_patter <- function(sim,
   ssf()
   out_pff <- pf_forward(.obs = obs,
                         .dlist = dlist,
-                        .rargs = margs,
-                        .dargs = margs,
+                        .rargs = rargs,
+                        .dargs = dargs,
                         .likelihood = lik,
                         .n = sim$n_particles,
                         .record = record,
@@ -182,7 +185,7 @@ get_ud_patter <- function(sim,
   out_pfbs <- pf_backward_sampler(.history = copy(out_pff$history),
                                   .obs = NULL,
                                   .dlist = dlist,
-                                  .dargs = margs,
+                                  .dargs = dargs,
                                   .record = record,
                                   .verbose = FALSE
                                   )

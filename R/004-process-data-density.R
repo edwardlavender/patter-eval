@@ -137,13 +137,14 @@ if (test) {
 nrow(spat_xy)
 
 #### Precalculate densities (1)
+# Note that mobility is increased by one grid cell
 tic()
 cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
   spatDens(.spat = spat,
            .xy = spat_xy[i, , drop = FALSE],
            .shape = path_pars$shape[1],
            .scale = path_pars$scale[1],
-           .mobility = path_pars$mobility[1],
+           .mobility = path_pars$mobility[1] + sr,
            file = spat_dt$file_1[i])
 },
 .chunk = TRUE,
@@ -157,7 +158,7 @@ cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
            .xy = spat_xy[i, , drop = FALSE],
            .shape = path_pars$shape[2],
            .scale = path_pars$scale[2],
-           .mobility = path_pars$mobility[2],
+           .mobility = path_pars$mobility[2] + sr,
            file = spat_dt$file_2[i])
 },
 .chunk = TRUE,

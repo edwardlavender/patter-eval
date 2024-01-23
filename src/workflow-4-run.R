@@ -44,8 +44,14 @@ workflow_patter <- function(sim, spat, im, win) {
                       .step = paste(sim$step, "mins"),
                       .mobility = sim$mobility,
                       .receiver_range = dlist$data$moorings$receiver_range[1])
+  # Adjust mobility
+  # * obs$mobility is used in pf_rpropose_reachable()
+  # * We adjust mobility here to account for the discretisation error
+  obs[, mobility := mobility + sr]
+  # Include depths
   obs[, depth_shallow := obs$depth - 5]
   obs[, depth_deep := obs$depth + 5]
+
   # ACPF algorithm
   success_acpf <- get_ud_patter(sim = sim,
                                 obs = obs, dlist = dlist, algorithm = "acpf",
