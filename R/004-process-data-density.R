@@ -145,7 +145,7 @@ cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
            .shape = path_pars$shape[1],
            .scale = path_pars$scale[1],
            .mobility = path_pars$mobility[1] + sr,
-           file = spat_dt$file_1[i])
+           .file = spat_dt$file_1[i])
 },
 .chunk = TRUE,
 .cl = 10L)
@@ -159,7 +159,7 @@ cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
            .shape = path_pars$shape[2],
            .scale = path_pars$scale[2],
            .mobility = path_pars$mobility[2] + sr,
-           file = spat_dt$file_2[i])
+           .file = spat_dt$file_2[i])
 },
 .chunk = TRUE,
 .cl = 10L)

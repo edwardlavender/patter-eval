@@ -1,12 +1,14 @@
 #' @title Pre-calculate movement densities around a point
 
-spatDens <- function(.spat, .xy, .shape, .scale, .mobility, file) {
+spatDens <- function(.spat, .xy, .shape, .scale, .mobility, .file) {
+
+  # Note that .mobility has been adjusted to account for grid resolution
 
   # Define reachable zone
   zone <-
     .xy |>
     terra::vect(crs = crs) |>
-    terra::buffer(width = .mobility + sr, quadsegs = 1e3L) |>
+    terra::buffer(width = .mobility, quadsegs = 1e3L) |>
     sf::st_as_sf()
 
   # Define probability density of movements into reachable cells
@@ -23,12 +25,12 @@ spatDens <- function(.spat, .xy, .shape, .scale, .mobility, file) {
            dens = dtruncgamma(.data$len,
                               .shape = .shape,
                               .scale = .scale,
-                              .mobility = .mobility + sr)) |>
+                              .mobility = .mobility)) |>
     # Retain only essential columns
     select("cell", "dens") |>
     as.data.table() |>
     # Write to file
-    qs::qsave(file)
+    qs::qsave(.file)
 
   NULL
 }
