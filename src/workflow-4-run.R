@@ -39,7 +39,6 @@ workflow_patter <- function(sim, spat, im, win) {
   dlist$algorithm$detection_overlaps <- read_overlaps(sim)
   dlist$algorithm$detection_kernels  <- read_kernels(sim)
   # Define observation timeline
-  # * Note that sim$mobility has been adjusted for spat resolution (see sim-data.R)
   obs <- pf_setup_obs(.dlist = dlist,
                       .trim = FALSE,
                       .step = paste(sim$step, "mins"),
