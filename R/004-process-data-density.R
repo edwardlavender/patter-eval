@@ -130,7 +130,7 @@ spat_xy <- cbind(spat_dt$x, spat_dt$y)
 toc()
 
 #### Define test
-test <- FALSE
+test <- TRUE
 if (test) {
   spat_xy <- spat_xy[1:1000, ]
 }
@@ -138,32 +138,37 @@ nrow(spat_xy)
 
 #### Precalculate densities (1)
 # Note that mobility is increased by one grid cell
-tic()
-cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
-  spatDens(.spat = spat,
-           .xy = spat_xy[i, , drop = FALSE],
-           .shape = path_pars$shape[1],
-           .scale = path_pars$scale[1],
-           .mobility = path_pars$mobility[1] + sr,
-           .file = spat_dt$file_1[i])
-},
-.chunk = TRUE,
-.cl = 10L)
-toc()
+if (TRUE) {
+  tic()
+  cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
+    spatDens(.spat = spat,
+             .xy = spat_xy[i, , drop = FALSE],
+             .shape = path_pars$shape[1],
+             .scale = path_pars$scale[1],
+             .mobility = path_pars$mobility[1] + sr,
+             .file = spat_dt$file_1[i])
+  },
+  .chunk = TRUE,
+  .cl = 75L)
+  toc()
+}
 
 #### Precalculate densities (2)
-tic()
-cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
-  spatDens(.spat = spat,
-           .xy = spat_xy[i, , drop = FALSE],
-           .shape = path_pars$shape[2],
-           .scale = path_pars$scale[2],
-           .mobility = path_pars$mobility[2] + sr,
-           .file = spat_dt$file_2[i])
-},
-.chunk = TRUE,
-.cl = 10L)
-toc()
+if (FALSE) {
+  tic()
+  cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
+    spatDens(.spat = spat,
+             .xy = spat_xy[i, , drop = FALSE],
+             .shape = path_pars$shape[2],
+             .scale = path_pars$scale[2],
+             .mobility = path_pars$mobility[2] + sr,
+             .file = spat_dt$file_2[i])
+  },
+  .chunk = TRUE,
+  .cl = 50L)
+  toc()
+}
+
 
 
 #### End of code.
