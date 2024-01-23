@@ -40,6 +40,15 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
+#### (optional) Test
+test <- FALSE
+if (test) {
+  cl <- 1L
+  sims_for_performance_ls <- sims_for_performance_ls[1:2]
+} else {
+  cl <- 50L
+}
+
 #### Run workflow (~13 h on one cl)
 gc()
 tic()
@@ -62,7 +71,7 @@ success <-
                  spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
             .chunkargs
           },
-          .cl = 50L)
+          .cl = cl)
 toc()
 # beepr::beep(10L)
 
