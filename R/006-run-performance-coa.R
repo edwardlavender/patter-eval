@@ -40,6 +40,15 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
+#### (optional) Test
+test <- FALSE
+if (test) {
+  cl <- NULL
+  sims_for_performance_ls <- sims_for_performance_ls[1:2]
+} else {
+  cl <- 10L
+}
+
 #### Run workflow (~25 s)
 gc()
 tic()
@@ -55,7 +64,7 @@ success <- cl_lapply(sims_for_performance_ls,
                      .chunk_fun = function(sim) {
                        list(spat = terra::unwrap(spatw))
                      },
-                     .cl = 10L)
+                     .cl = cl)
 toc()
 
 #### Record success
