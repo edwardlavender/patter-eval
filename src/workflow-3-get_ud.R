@@ -7,11 +7,14 @@ get_ud_path <- function(sim,
                         overwrite = TRUE) {
   out_file <- here_alg(sim, "path", "ud.tif")
   if (overwrite | !file.exists(out_file)) {
+    # Use .discretise = TRUE for consistency
+    # (The path is already defined on the grid)
     ud_path <-
       map_dens(.map = spat,
                .im = im,
                .win = win,
                .coord = path[, .(x, y)],
+               .discretise = TRUE,
                .plot = FALSE,
                .verbose = FALSE,
                sigma = sigma)
@@ -35,11 +38,13 @@ get_ud_coa <- function(sim,
   out_coa <- coa(.dlist = dlist,
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
+  # Use .discretise = TRUE for consistency
   ud_coa  <-
     map_dens(.map = spat,
              .im = im,
              .win = win,
              .coord = out_coa[, .(x = coa_x, y = coa_y)],
+             .discretise = TRUE,
              .plot = FALSE,
              .verbose = FALSE,
              sigma = sigma)
@@ -184,9 +189,11 @@ get_ud_patter <- function(sim,
   t2_pfbs  <- Sys.time()
 
   #### Map arguments
+  # Use .discretise = TRUE for speed
   map_args <- list(.map = spat,
                    .im = im,
                    .win = win,
+                   .discretise = TRUE,
                    .plot = FALSE,
                    .verbose = FALSE,
                    sigma = sigma)
