@@ -262,6 +262,14 @@ toc()
 stopifnot(length(unique(paths[[1]]$path_id)) == n_path_realisations)
 saveRDS(paths, here_input("paths.rds"))
 
+#### Validate mobility on grid
+# Confirm that sequential movements on the grid are < mobility
+head(paths[[1]])
+lapply(paths, \(d) range(d$length, na.rm = TRUE))
+lapply(seq_len(length(paths)), \(i) {
+  stopifnot(max(paths[[i]]$length, na.rm = TRUE) < path_pars$mobility[i])
+})
+
 
 #########################
 #########################
@@ -547,7 +555,8 @@ range(sims$count)
 
 #### Update selected parameters as necessary
 # Account for spat resolution & mobility
-sims$mobility <- sims$mobility + terra::res(spat)[1]
+# (This should be no longer required & is commented.)
+# sims$mobility <- sims$mobility + terra::res(spat)[1]
 
 #### Define IDs
 sims$id <- seq_len(nrow(sims))
