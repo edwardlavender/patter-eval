@@ -139,10 +139,10 @@ if (test) {
 }
 nrow(spat_xy)
 
-#### Precalculate densities (1)
+#### Precalculate densities (1): ~17 mins (50 cl)
 # Note that mobility is increased by one grid cell
 tic()
-if (TRUE) {
+if (FALSE) {
   gc()
   log.txt <- here_data("sims", "output", "log", "server",
                        "004-process-data-density-progress-1.txt")
@@ -165,7 +165,7 @@ toc()
 #### Precalculate densities (2)
 gc()
 tic()
-if (FALSE) {
+if (TRUE) {
   log.txt <- here_data("sims", "output", "log", "server",
                        "004-process-data-density-progress-2.txt")
   log.con <- log_open(log.txt)
