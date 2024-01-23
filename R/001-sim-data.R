@@ -59,7 +59,7 @@ dir.create(here_data("sims", "output", "synthesis"))
 # * We formerly used a 5 m grid
 # * A 10 m grid is MUCH faster for most routines
 # * And resultant UDs occupy less disk space
-spat <- spatTemplate(.res = rs,
+spat <- spatTemplate(.res = sr,
                      .value = 1,
                      .xmin = 0, .xmax = 1e4,
                      .ymin = 0, .ymax = 1e4,
