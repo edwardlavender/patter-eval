@@ -133,13 +133,20 @@ toc()
 test <- TRUE
 if (test) {
   spat_xy <- spat_xy[1:1000, ]
+  cl <- 10L
+} else {
+  cl <- 50L
 }
 nrow(spat_xy)
 
 #### Precalculate densities (1)
 # Note that mobility is increased by one grid cell
 if (TRUE) {
+  gc()
   tic()
+  log.txt <- here_data("sims", "output", "log", "server",
+                       "004-process-data-density-progress-1.txt")
+  log.con <- log_open(log.txt)
   cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
     spatDens(.spat = spat,
              .xy = spat_xy[i, , drop = FALSE],
@@ -149,13 +156,19 @@ if (TRUE) {
              .file = spat_dt$file_1[i])
   },
   .chunk = TRUE,
-  .cl = 75L)
+  .cl = cl)
+  log_close(log.con)
+  # rstudioapi::navigateToFile(log.txt)
   toc()
 }
 
 #### Precalculate densities (2)
 if (FALSE) {
+  gc()
   tic()
+  log.txt <- here_data("sims", "output", "log", "server",
+                       "004-process-data-density-progress-2.txt")
+  log.con <- log_open(log.txt)
   cl_lapply(seq_len(nrow(spat_xy)), .fun = function(i) {
     spatDens(.spat = spat,
              .xy = spat_xy[i, , drop = FALSE],
@@ -165,10 +178,11 @@ if (FALSE) {
              .file = spat_dt$file_2[i])
   },
   .chunk = TRUE,
-  .cl = 50L)
+  .cl = cl)
+  log_close(log.con)
+  # rstudioapi::navigateToFile(log.txt)
   toc()
 }
-
 
 
 #### End of code.
