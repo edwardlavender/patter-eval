@@ -1,9 +1,9 @@
 #########################
 #########################
-#### plot-parameters.R
+#### plot-data.R
 
 #### Aims
-# 1) Plot simulated parameters/datasets
+# 1) Plot simulated data
 
 #### Prerequisites
 # 1) NA
