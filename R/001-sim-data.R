@@ -76,6 +76,7 @@ spat    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
                            spat,
                            values = g$depth)
 names(spat) <- "bathy"
+terra::global(terra::cellSize(spat, unit = "km"), "sum")
 # Write SpatRaster(s)
 # * Include wrapped version for parallelised routines
 saveRDS(terra::wrap(spat), here_input("spatw.rds"))
@@ -572,6 +573,8 @@ head(sims)
 nrow(sims)
 
 #### Save sims
+length(which(sims$performance)) # 1193
+nrow(sims)                      # 39516
 saveRDS(sims, here_input("sims.rds"))
 
 
