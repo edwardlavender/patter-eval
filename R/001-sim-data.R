@@ -127,6 +127,7 @@ range(period)
 detection_pars <- data.table(alpha = c(4, 5),
                              beta = c(-0.01, -0.025),
                              gamma = c(750, 500))
+saveRDS(detection_pars, here_input("detection_pars.rds"))
 # Visualise detection probability function
 i <- 2
 x <- seq(0, 1000, by = 1)
