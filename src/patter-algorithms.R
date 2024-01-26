@@ -37,12 +37,13 @@ pf_dpropose_read <- function(.particles, .obs, .t, .dlist) {
 #' @title Backward sampler (parallel implementation)
 
 pf_backward_sampler_p <- function(.history,
-                                  .dpropose = pf_dpropose, ...,
+                                  .dpropose = pf_dpropose,
                                   .obs = NULL,
                                   .dlist,
+                                  .dargs = list(),
                                   .cl = NULL,
                                   .cl_varlist = NULL,
-                                  .cl_chunk = ifelse(is.null(.cl), FALSE, TRUE),
+                                  .cl_chunk = cl_chunk(.cl),
                                   .record = pf_opt_record(),
                                   .verbose = getOption("patter.verbose")
 ) {
@@ -73,6 +74,9 @@ pf_backward_sampler_p <- function(.history,
   .history[[n_step]] <- .pf_history_elm(.history = .history, .elm = n_step,
                                         cols = read_cols)
   n_particle <- fnrow(.history[[n_step]])
+  # Function arguments
+  .dargs$.obs   <- .obs
+  .dargs$.dlist <- .dlist
   # Global variables
   dens <- NULL
 
@@ -106,18 +110,30 @@ pf_backward_sampler_p <- function(.history,
                                               cols = read_cols)
           }
           # Calculate step densities
-          #
-          # FIX THIS
-          #
-          prob <- .dpropose(path[[t]], .history[[tp]], ...)$dens
+          pnow <-
+            dplyr::bind_cols(
+              path[[t]] |>
+                select("cell_now", "x_now", "y_now") |>
+                as.data.table(),
+              .history[[tp]] |>
+                select(cell_past = "cell_now",
+                       x_past = "x_now",
+                       y_past = "y_now") |>
+                as.data.table()
+            ) |>
+            as.data.table()
+          .dargs$.particles <- pnow
+          .dargs$.t         <- t
+          prob              <- do.call(.dpropose, .dargs)$dens
           # Sample a previous location
-          index <- sample.int(fnrow(.history[[tp]]), size = 1, prob = prob)
+          index <- sample.int(length(prob), size = 1L, prob = prob)
           path[[tp]] <- .history[[tp]][index, ]
-          path[[tp]][, dens := prob[index]]
+          path[[t]][, dens := prob[index]]
         }
 
         #### Collate path
         cat_log("... ... ... Collating paths...")
+        path[[1]][, dens := NA_real_]
         path <-
           path |>
           rbindlist() |>
@@ -126,11 +142,10 @@ pf_backward_sampler_p <- function(.history,
 
         #### Save path
         cat_log("... ... ... Recording path...")
-
         .pf_write_particles(.particles = path, .sink = .record$sink,
                             .filename = t, .write = write)
         # Save path in memory
-        if (!.record$save) {
+        if (.record$save) {
           return(path)
         } else {
           return(NULL)
@@ -138,7 +153,6 @@ pf_backward_sampler_p <- function(.history,
       })
 
   #### Return outputs
-  cat_log("... Completing simulation...")
   if (is.null(paths[[1]])) {
     paths <- NULL
   } else {
@@ -148,14 +162,8 @@ pf_backward_sampler_p <- function(.history,
       arrange(.data$path_id, .data$timestep) |>
       as.data.table()
   }
-  t_end <- Sys.time()
-  time <- list(start = t_onset,
-               end = t_onset,
-               duration = difftime(t_end, t_onset))
-  out <- list(path = paths,
-              time = time)
-
-  #### Return outputs
-  # class(out) <- c(class(out), "pf_path")
-  out
+  .pf_backward_output(.start = t_onset,
+                      .history = list(),
+                      .path = paths,
+                      .record = .record)
 }
