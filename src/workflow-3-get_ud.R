@@ -174,7 +174,7 @@ get_ud_patter <- function(sim,
 
   #### Backward killer
   t1_pfbk  <- Sys.time()
-  out_pfbk <- pf_backward_killer(.history = copy(out_pff$history),
+  out_pfbk <- pf_backward_killer(.history = out_pff$history,
                                  .record = record,
                                  .verbose = FALSE)
   t2_pfbk  <- Sys.time()
@@ -182,13 +182,14 @@ get_ud_patter <- function(sim,
   #### Backward sampler
   t1_pfbs  <- Sys.time()
   ssf()
-  out_pfbs <- pf_backward_sampler(.history = copy(out_pff$history),
-                                  .obs = NULL,
-                                  .dlist = dlist,
-                                  .dargs = dargs,
-                                  .record = record,
-                                  .verbose = FALSE
-                                  )
+  dlist$algorithm$sim <- sim
+  out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
+                                    .dpropose = pf_dpropose_read,
+                                    .obs = obs,
+                                    .dlist = dlist,
+                                    .dargs = dargs,
+                                    .record = record,
+                                    .verbose = FALSE)
   t2_pfbs  <- Sys.time()
 
   #### Map arguments
