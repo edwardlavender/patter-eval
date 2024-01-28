@@ -140,8 +140,10 @@ get_ud_patter <- function(sim,
   # Proposal function
   # * Stochastic kicks are up to sim$mobility in length
   # * In directed sampling we account for the discretisation error
-  rargs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility)
-  dargs <- list(.shape = sim$shape, .scale = sim$scale, .mobility = sim$mobility + sr)
+  rargs <- list(.shape = sim$shape, .scale = sim$scale,
+                .mobility = sim$mobility)
+  dargs <- list(.shape = sim$shape, .scale = sim$scale,
+                .mobility = sim$mobility + sr)
   # Likelihood functions
   algorithm <- match.arg(algorithm)
   if (algorithm == "acpf") {
@@ -156,41 +158,52 @@ get_ud_patter <- function(sim,
   record <- pf_opt_record(.save = TRUE)
 
   #### Forward simulation
-  t1_pff <- Sys.time()
+  t1_pff  <- Sys.time()
   ssf()
-  out_pff <- pf_forward(.obs = obs,
-                        .dlist = dlist,
-                        .rargs = rargs,
-                        .dargs = dargs,
-                        .likelihood = lik,
-                        .n = sim$n_particles,
-                        .record = record,
-                        .verbose = FALSE)
-  t2_pff <- Sys.time()
+  out_pff  <- pf_forward(.obs = obs,
+                         .dlist = dlist,
+                         .rargs = rargs,
+                         .dargs = dargs,
+                         .likelihood = lik,
+                         .n = sim$n_particles,
+                         .record = record,
+                         .verbose = FALSE)
+  t2_pff   <- Sys.time()
+  pff_mins <- mins(t2_pff, t1_pff)
   saveRDS(out_pff$convergence, out_file_convergence)
   if (!out_pff$convergence) {
     return(FALSE)
   }
 
   #### Backward killer
-  t1_pfbk  <- Sys.time()
-  out_pfbk <- pf_backward_killer(.history = out_pff$history,
-                                 .record = record,
-                                 .verbose = FALSE)
-  t2_pfbk  <- Sys.time()
-
-  #### Backward sampler
-  t1_pfbs  <- Sys.time()
-  ssf()
-  dlist$algorithm$sim <- sim
-  out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
-                                    .dpropose = pf_dpropose_read,
-                                    .obs = obs,
-                                    .dlist = dlist,
-                                    .dargs = list(),
+  pfbk_mins  <- NA_real_
+  run_killer <- TRUE
+  if (run_killer) {
+    t1_pfbk   <- Sys.time()
+    out_pfbk  <- pf_backward_killer(.history = out_pff$history,
                                     .record = record,
                                     .verbose = FALSE)
-  t2_pfbs  <- Sys.time()
+    t2_pfbk   <- Sys.time()
+    pfbk_mins <- mins(t2_pfbk, out_pfbk)
+  }
+
+  #### Backward sampler
+  pfbs_mins  <- NA_real_
+  run_sample <- TRUE
+  if (run_sampler) {
+    t1_pfbs  <- Sys.time()
+    ssf()
+    dlist$algorithm$sim <- sim
+    out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
+                                      .dpropose = pf_dpropose_read,
+                                      .obs = obs,
+                                      .dlist = dlist,
+                                      .dargs = list(),
+                                      .record = record,
+                                      .verbose = FALSE)
+    t2_pfbs  <- Sys.time()
+    pfbs_mins <- mins(t2_pfbs, t1_pfbs)
+  }
 
   #### Map arguments
   # Use .discretise = TRUE for speed
@@ -207,37 +220,50 @@ get_ud_patter <- function(sim,
   t1_udf          <- Sys.time()
   do.call(map_dens, map_args)
   t2_udf          <- Sys.time()
+  udf_mins        <- mins(t2_udf, t1_udf)
 
   #### Mapping (backward killer)
-  map_args$.coord <- NULL
-  map_args$.coord <- pf_coord(.history = out_pfbk$history, .bathy = spat)
-  t1_udk          <- Sys.time()
-  do.call(map_dens, map_args)
-  t2_udk          <- Sys.time()
+  udk_mins          <- NA_real_
+  if (run_killer) {
+    map_args$.coord <- NULL
+    map_args$.coord <- pf_coord(.history = out_pfbk$history, .bathy = spat)
+    t1_udk          <- Sys.time()
+    do.call(map_dens, map_args)
+    t2_udk          <- Sys.time()
+    udk_mins        <- mins(t2_udk, t1_udk)
+  }
 
   #### Mapping (backward sampler)
-  map_args$.coord <- NULL
-  map_args$.coord <- pf_coord(.history = out_pfbs$history, .bathy = spat)
-  t1_uds          <- Sys.time()
-  do.call(map_dens, map_args)
-  t2_uds          <- Sys.time()
+  uds_mins          <- NA_real_
+  if (run_sampler) {
+    map_args$.coord <- NULL
+    map_args$.coord <- pf_coord(.history = out_pfbs$history, .bathy = spat)
+    t1_uds          <- Sys.time()
+    do.call(map_dens, map_args)
+    t2_uds          <- Sys.time()
+    uds_mins        <- mins(t2_uds, t1_uds)
+  }
 
   #### Outputs
   # Timings
   time <- data.table(id = sim$id,
-                     pff = mins(t2_pff, t1_pff),
-                     pfbk = mins(t2_pfbk, t1_pfbk),
-                     pfbs = mins(t2_pfbs, t2_pfbs),
-                     udf = mins(t2_udf, t1_udf),
-                     udk = mins(t2_udk, t1_udk),
-                     uds = mins(t2_uds, t2_uds))
+                     pff = pff_mins,
+                     pfbk = pfbk_mins,
+                     pfbs = pfbs_mins,
+                     udf = udf_mins
+                     udk = udk_mins,
+                     uds = uds_mins)
 
   qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
   # qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
   # UD
   write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
-  write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
-  write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
+  if (run_killer) {
+    write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
+  }
+  if (run_sampler) {
+    write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
+  }
   return(TRUE)
 }
