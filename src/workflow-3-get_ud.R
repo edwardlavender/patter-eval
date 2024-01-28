@@ -187,7 +187,7 @@ get_ud_patter <- function(sim,
                                     .dpropose = pf_dpropose_read,
                                     .obs = obs,
                                     .dlist = dlist,
-                                    .dargs = dargs,
+                                    .dargs = list(),
                                     .record = record,
                                     .verbose = FALSE)
   t2_pfbs  <- Sys.time()

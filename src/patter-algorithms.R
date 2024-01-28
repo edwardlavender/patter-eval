@@ -18,6 +18,6 @@ pf_dpropose_read <- function(.particles, .obs, .t, .dlist) {
     qs::qread()
   # Match densities & return .particles with a 'dens' column
   # * This behaviour matches pf_dpropose()
-  .particles[, dens := spat_dens[match(.particles$cell_past, spat_dens$cell)]]
-  .particles[dens > 0, ]
+  .particles[, dens := spat_dens[match(.particles$cell_past, spat_dens$cell)]$dens]
+  .particles[which(dens > 0), ]
 }
