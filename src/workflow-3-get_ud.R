@@ -184,7 +184,7 @@ get_ud_patter <- function(sim,
                                     .record = record,
                                     .verbose = FALSE)
     t2_pfbk   <- Sys.time()
-    pfbk_mins <- mins(t2_pfbk, out_pfbk)
+    pfbk_mins <- mins(t2_pfbk, t1_pfbk)
   }
 
   #### Backward sampler
