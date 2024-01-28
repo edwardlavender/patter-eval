@@ -193,12 +193,15 @@ get_ud_patter <- function(sim,
   if (run_sampler) {
     t1_pfbs  <- Sys.time()
     ssf()
-    dlist$algorithm$sim <- sim
-    out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
-                                      .dpropose = pf_dpropose_read,
+    # For pf_backward_sampler_p():
+    # * dlist$algorithm$sim <- sim
+    # * .dpropose = pf_dpropose_read
+    # * .dargs = list()
+    out_pfbs <- pf_backward_sampler_v(.history = out_pff$history,
+                                      .dpropose = pf_dpropose,
                                       .obs = obs,
                                       .dlist = dlist,
-                                      .dargs = list(),
+                                      .dargs = dargs,
                                       .record = record,
                                       .verbose = FALSE)
     t2_pfbs  <- Sys.time()
