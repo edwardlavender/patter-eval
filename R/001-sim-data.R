@@ -175,6 +175,7 @@ toc()
 saveRDS(arrays, here_input("arrays.rds"))
 
 #### Examine range in array coverage (~5 s)
+area_total <- terra::expanse(spat, transform = TRUE)$area
 coverage <-
   lapply(split(detection_pars, seq_len(nrow(detection_pars))), function(d) {
     pbapply::pblapply(seq_len(length(arrays)), function(i) {
@@ -190,8 +191,6 @@ coverage <-
       area_in_containers <- terra::mask(area_in_containers, containers)
       area_in_containers <- terra::global(area_in_containers, "sum", na.rm = TRUE)$sum
       # Calculate % area in containers
-      # * use transform = FALSE for speed
-      area_total         <- terra::expanse(spat, transform = FALSE)$area
       data.table(array_type = i,
                  n_receiver = array$n_receiver[1],
                  arrangement = array$arrangement[1],
@@ -200,6 +199,19 @@ coverage <-
   })
 coverage[[1]]; coverage[[2]]
 range(coverage[[1]]$pc); range(coverage[[2]]$pc)
+# Create tidy table
+array_table <- coverage[[1]]
+array_table$`Coverage (750)` <- tidy_numbers(coverage[[1]][, .(pc)], 2)
+array_table$`Coverage (500)` <- tidy_numbers(coverage[[2]][, .(pc)], 2)
+array_table |>
+  arrange(arrangement) |>
+  mutate(arrangement = stringr::str_to_sentence(arrangement)) |>
+  select(Array = array_type,
+         Arrangement = arrangement,
+         `Receiver` = n_receiver,
+         `Coverage (750)`,
+         `Coverage (500)`) |>
+  tidy_write(here_fig("arrays.txt"))
 
 
 #########################
