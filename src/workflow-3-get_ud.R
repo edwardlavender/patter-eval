@@ -188,8 +188,8 @@ get_ud_patter <- function(sim,
   }
 
   #### Backward sampler
-  pfbs_mins  <- NA_real_
-  run_sample <- TRUE
+  pfbs_mins   <- NA_real_
+  run_sampler <- TRUE
   if (run_sampler) {
     t1_pfbs  <- Sys.time()
     ssf()
