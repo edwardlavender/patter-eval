@@ -221,7 +221,7 @@ get_ud_patter <- function(sim,
   #### Mapping (forward run)
   map_args$.coord <- pf_coord(.history = out_pff$history, .bathy = spat)
   t1_udf          <- Sys.time()
-  do.call(map_dens, map_args)
+  udf             <- do.call(map_dens, map_args)
   t2_udf          <- Sys.time()
   udf_mins        <- mins(t2_udf, t1_udf)
 
@@ -231,7 +231,7 @@ get_ud_patter <- function(sim,
     map_args$.coord <- NULL
     map_args$.coord <- pf_coord(.history = out_pfbk$history, .bathy = spat)
     t1_udk          <- Sys.time()
-    do.call(map_dens, map_args)
+    udk             <- do.call(map_dens, map_args)
     t2_udk          <- Sys.time()
     udk_mins        <- mins(t2_udk, t1_udk)
   }
@@ -242,7 +242,7 @@ get_ud_patter <- function(sim,
     map_args$.coord <- NULL
     map_args$.coord <- pf_coord(.history = out_pfbs$history, .bathy = spat)
     t1_uds          <- Sys.time()
-    do.call(map_dens, map_args)
+    uds             <- do.call(map_dens, map_args)
     t2_uds          <- Sys.time()
     uds_mins        <- mins(t2_uds, t1_uds)
   }
