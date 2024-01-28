@@ -253,7 +253,7 @@ get_ud_patter <- function(sim,
                      pff = pff_mins,
                      pfbk = pfbk_mins,
                      pfbs = pfbs_mins,
-                     udf = udf_mins
+                     udf = udf_mins,
                      udk = udk_mins,
                      uds = uds_mins)
 
