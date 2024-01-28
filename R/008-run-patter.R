@@ -46,7 +46,7 @@ sims <- sims_for_performance
 # type <- "sensitivity"
 # sims <- sims_for_sensitivity
 # (optional) Define test data subset
-test <- TRUE
+test <- FALSE
 if (test) {
   sims <- sims_for_performance[1:2L ]
 }
