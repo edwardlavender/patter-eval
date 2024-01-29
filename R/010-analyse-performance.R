@@ -63,12 +63,13 @@ skills$alg <- factor(skills$alg, levels = algs, labels = seq_len(length(algs)))
 # * This only affects skills plots
 # * Code for mapping requires manual adjustment (see FLAG statements)
 if (TRUE) {
-  algs <- c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)")
+  algs_sbt <- c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)")
+  algs_ind <- as.character(which(algs %in% algs_sbt))
   skills <-
     skills |>
-    filter(alg %in% algs) |>
-    mutate(alg = factor(alg, levels = algs, labels = seq_len(length(algs))))
-  as.data.table()
+    filter(alg %in% algs_ind) |>
+    mutate(alg = factor(alg, levels = algs, labels = seq_len(length(algs)))) |>
+    as.data.table()
 }
 
 
@@ -89,9 +90,11 @@ sims_for_maps <-
 #### Set up plot
 # The figure will be annotated outside of R
 # (optional) FLAG: adjust width & number of columns for algorithms
+dir.create(here_fig("performance"), recursive = TRUE)
 png(here_fig("performance", png_name("map")),
-    height = 7, width = 10, units = "in", res = 600)
-pp <- par(mfrow = c(4, 5))
+    height = 8, width = 12, units = "in", res = 600)
+pp <- par(mfrow = c(4, 9),
+          oma = c(0, 0, 0, 0), mar = rep(1, 4))
 pbapply::pblapply(1:4, function(i) {
 
   #### Read UDs
@@ -130,7 +133,13 @@ pbapply::pblapply(1:4, function(i) {
   lapply(uds, function(ud) {
     # Plot UD (scaled)
     sud <- ud / scale
-    spatMap(sud, range = c(0, 1), legend = FALSE)
+    spatMap(sud, range = c(0, 1), legend = FALSE, mar = NA)
+    # (optional) Set speed to TRUE to check plot layout only
+    speed <- FALSE
+    if (speed) {
+      spatAxes(ud)
+      return(NULL)
+    }
     # Add home range (based on unscaled UD)
     map_hr_home(ud, .add = TRUE,
                 border = "dimgrey", lwd = 0.75)
