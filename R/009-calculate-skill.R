@@ -47,6 +47,12 @@ if (test) {
   cl    <- 20L
   chunk <- TRUE
 }
+# (optional) Debug with parallel = FALSE
+parallel <- TRUE
+if (!parallel) {
+  cl    <- NULL
+  chunk <- FALSE
+}
 
 #### Collate skill scores
 # * Loop over sims
@@ -65,7 +71,7 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
   #### Define outfile
   out_file  <- here_output("skill", paste0(sim$id, ".rds"))
   overwrite <- FALSE
-  if (overwrite && file.exists(out_file)) {
+  if (!overwrite && file.exists(out_file)) {
     return(readRDS(out_file))
   }
 
