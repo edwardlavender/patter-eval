@@ -134,9 +134,11 @@ saveRDS(skills, here_data("sims", "synthesis", "skill-raw.rds"))
 #### Process skill scores
 
 #### Drop simulations which failed for all algorithms
+nrow(skills)
 pos_success <- rowSums(!is.na(skills[, c("mb", "me", "rmse", "R", "d")])) > 0
 skills[!pos_success, ]
 skills <- skills[pos_success, ]
+nrow(skills)
 
 #### Add required information
 skills <- merge(skills, sims, by = "id")
