@@ -54,11 +54,22 @@ metrics_lim <-
        R = c(0, 1),
        d = c(0, 1))
 
-#### Skill factors
+#### Define algorithms
+# Define algorithms (factor)
 unique(skills$alg)
-skills$alg <- factor(skills$alg,
-                     c("Null", "COA(30)", "COA(120)", "ACPF(K)", "ACDCPF(K)"),
-                     labels = 0:4)
+algs <- c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(K)", "ACDCPF(K)", "ACPF(S)", "ACDCPF(S)")
+skills$alg <- factor(skills$alg, levels = algs, labels = seq_len(length(algs)))
+# (optional) Subset algorithms
+# * This only affects skills plots
+# * Code for mapping requires manual adjustment (see FLAG statements)
+if (TRUE) {
+  algs <- c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)")
+  skills <-
+    skills |>
+    filter(alg %in% algs) |>
+    mutate(alg = factor(alg, levels = algs, labels = seq_len(length(algs))))
+  as.data.table()
+}
 
 
 #########################
@@ -76,25 +87,36 @@ sims_for_maps <-
   as.data.table()
 
 #### Set up plot
-# The figure will be annotated outside of R.
+# The figure will be annotated outside of R
+# (optional) FLAG: adjust width & number of columns for algorithms
 png(here_fig("performance", png_name("map")),
     height = 7, width = 10, units = "in", res = 600)
 pp <- par(mfrow = c(4, 5))
 pbapply::pblapply(1:4, function(i) {
 
   #### Read UDs
-  sim      <- sims_for_maps[i, ]
+  sim        <- sims_for_maps[i, ]
   # list.files(here_alg(sim), recursive = TRUE)
-  ud_path  <- terra::rast(here_alg(sim, "path", "ud.tif"))
-  ud_coa_1 <- terra::rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
-  ud_coa_2 <- terra::rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
-  # ud_rsp_1
-  # ud_rsp_2
-  ud_acpf   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-  ud_acdcpf <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
+  ud_path    <- terra::rast(here_alg(sim, "path", "ud.tif"))
+  ud_coa_1   <- terra::rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
+  ud_coa_2   <- terra::rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
+  ud_rsp_1   <- terra::rast(here_alg(sim, "rsp", "default", "ud.tif"))
+  ud_rsp_2   <- terra::rast(here_alg(sim, "rsp", "custom", "ud.tif"))
+  ud_acpff   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
+  ud_acdcpff <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
+  ud_acpfk   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
+  ud_acdcpfk <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
+  ud_acpfs   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
+  ud_acdcpfs <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
+  # Select UDs
+  # * (optional) FLAG: modify UDs included in this list
   uds <- list(ud_path,
               ud_coa_1, ud_coa_2,
-              ud_acpf, ud_acdcpf)
+              ud_rsp_1, ud_rsp_2,
+              ud_acpff, ud_acdcpff,
+              # ud_acpfk, ud_acdcpfk,
+              ud_acpfs, ud_acdcpfs
+              )
 
   #### Calculate scaling parameter
   # We will scale UDs (within rows) to a maximum value of 1 for comparison
@@ -156,7 +178,8 @@ sims_for_skill <-
 #### Visualise boxplots
 png(here_fig("performance", png_name("barplots")),
     height = 10, width = 15, units = "in", res = 600)
-pp <- par(mfrow = c(4, 5), oma = c(1, 3, 1, 1), mar = c(2, 2, 2, 2))
+pp <- par(mfrow = c(4, length(unique(skills$alg))),
+          oma = c(1, 3, 1, 1), mar = c(2, 2, 2, 2))
 lapply(1:4, function(i) {
   # Define skill scores across path realisations
   skill <- skills[id %in%
