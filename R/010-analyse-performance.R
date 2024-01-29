@@ -174,10 +174,79 @@ if (TRUE) {
 
 }
 
-
 #########################
 #########################
 #### Barplots of error statistics
+# (selected barplots for maps)
+
+# Define type
+# * A subset of algorithms (as in the main text figure)
+# * All algorithms (as in the supporting map)
+type  <- "full"
+width <- 4
+# type  <- "partial"
+# width <- 2.5
+
+# Define dataset
+skills_for_bars <-
+  skills |>
+  filter(id %in% sims_for_maps$id) |>
+  as.data.table()
+if (type == "partial") {
+  skills_for_bars <-
+    skills_for_bars |>
+    filter(alg %in% c("COA(30)", "RSP(1)", "ACPF(S)", "ACDCPF(S)")) |>
+    as.data.table()
+}
+# Define common y axis limit data
+ydata <- range(skills_for_bars$me, na.rm = TRUE)
+
+# Build image
+png(here_fig("performance", png_name(paste0("map-barplot-", type))),
+    height = 8, width = width, units = "in", res = 600)
+pp <- par(mfrow = c(4, 1),
+          oma = c(2, 4, 2, 2),
+          mar = rep(2, 4))
+pbapply::pblapply(1:4, function(i) {
+
+  # Isolate skill metrics
+  sim <- sims_for_maps[i, ]
+  sk <-
+    skills_for_bars |>
+    filter(id == sim$id) |>
+    as.data.table()
+
+  # Create blank plot
+  sk$x <- seq_len(nrow(sk))
+  axis_ls <- pretty_plot(sk$x,
+                         sk$me,
+                         xlim = c(0.5, max(sk$x) + 0.5),
+                         pretty_axis = list(x = list(x = sk$x, y = ydata),
+                                            axis = list(list(side = 1,
+                                                             at = sk$x,
+                                                             labels = sk$label),
+                                                        list(NULL))
+                         ),
+                         xlab = "", ylab = "",
+                         type = "n")
+
+  # Add bars
+  for (j in seq_len(nrow(sk))) {
+    rect(xleft = sk$x[j] - 0.5,
+         ybottom = axis_ls[[2]]$lim[1],
+         xright = sk$x[j] + 0.5,
+         ytop = sk$me[j],
+         col = sk$col[j])
+
+  }
+
+}) |> invisible()
+dev.off()
+
+
+#########################
+#########################
+#### Boxplots of error statistics
 
 #### Select simulations
 # Define arrays
@@ -192,7 +261,7 @@ sims_for_skill <-
   as.data.table()
 
 #### Visualise boxplots
-png(here_fig("performance", png_name("barplots")),
+png(here_fig("performance", png_name("boxplots")),
     height = 10, width = 15, units = "in", res = 600)
 pp <- par(mfrow = c(4, length(metrics)),
           oma = c(1, 3, 1, 1), mar = c(2, 2, 2, 2))
