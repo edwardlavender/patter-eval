@@ -71,9 +71,11 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
                     coord.x = "Longitude", coord.y = "Latitude")
   }
   # Define RSP args
+  # * Arbitrarily set max.time (days) to any time greater than study duration
   args <- list(input = act,
                t.layer = tm,
-               coord.x = "Longitude", coord.y = "Latitude")
+               coord.x = "Longitude", coord.y = "Latitude",
+               max.time = 100)
   if (type == "custom") {
     # dynBBMM() is sensitive to raster area
     # * Larger er.ad appears to require larger areas
@@ -107,8 +109,12 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
     return("dynBBMM")
   }
   dbb <- dbb$dbbmm[[1]]
+  dbb <- terra::rast(dbb)
+  if (terra::nlyr(dbb) > 1L) {
+    warning(paste("Multi-layered UD: sim$id", sim$id))
+  }
   # Resample RSP onto spat grid for consistency
-  ud_rsp <- terra::project(terra::rast(dbb), terra::crs(spat))
+  ud_rsp <- terra::project(dbb, terra::crs(spat))
   ud_rsp <- terra::resample(ud_rsp, spat)
   ud_rsp <- ud_rsp / terra::global(ud_rsp, "sum")[1, 1]
   # stopifnot(all.equal(1, terra::global(ud_rsp, "sum")[1, 1]))
