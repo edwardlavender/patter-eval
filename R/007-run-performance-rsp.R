@@ -28,6 +28,11 @@ library(dplyr, warn.conflicts = FALSE)
 library(tictoc)
 dv::src()
 
+# Validate gdistance for RSP
+library(gdistance)
+Sys.sleep(60)
+library(gdistance)
+
 #### Load data
 spatw        <- readRDS(here_input("spatw.rds"))
 spat_ll_dbbw <- terra::wrap(terra::rast(here_input("spat_ll_dbb.tif")))
