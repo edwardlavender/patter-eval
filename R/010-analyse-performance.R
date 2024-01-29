@@ -73,7 +73,7 @@ skills <-
 #### Maps of space use
 
 # Make maps (~37 s)
-if (FALSE) {
+if (TRUE) {
 
   #### Select simulations
   # Use specific combination, two receiver levels, one array/path realisation
@@ -130,8 +130,15 @@ if (FALSE) {
     m <- read_array(sim)
     lapply(uds, function(ud) {
       # Plot UD (scaled)
-      sud <- ud / scale
-      spatMap(sud, range = c(0, 1), legend = FALSE, mar = NA)
+      rescale <- FALSE
+      if (rescale) {
+        sud <- ud / scale
+        range <- c(0, 1)
+      } else {
+        sud <- ud
+        range <- NULL
+      }
+      spatMap(sud, range = range, legend = FALSE, mar = NA)
       # (optional) Set speed to TRUE to check plot layout only
       speed <- FALSE
       if (speed) {
@@ -166,8 +173,6 @@ if (FALSE) {
   dev.off()
 
 }
-
-
 
 
 #########################
