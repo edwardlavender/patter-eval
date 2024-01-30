@@ -38,22 +38,6 @@ skills <- readRDS(here_data("sims", "synthesis", "skill.rds"))
 #########################
 #### Data preparation
 
-# Define function that assigns png names
-png_name <- function(name) {
-  paste0(name, "-",  sims$combination[1], ".png")
-}
-
-#### Define selected receiver numbers
-# On some plots, we only consider two different numbers of receivers
-nr <- c(10, 100)
-metrics <- c("mb", "me", "rmse", "R", "d")
-metrics_lim <-
-  list(mb = NULL,
-       me = NULL,
-       rmse = NULL,
-       R = c(0, 1),
-       d = c(0, 1))
-
 #### Define algorithms
 # Define algorithms (subset)
 algs <- data.frame(alg = c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)"),
@@ -67,16 +51,49 @@ skills <-
   left_join(algs, by = "alg", relationship = "many-to-one") |>
   as.data.table()
 
+#### Define selected receiver numbers
+# On some plots, we only consider two different numbers of receivers
+nr <- c(10, 100)
+
+#### Define skill metrics & constant limits across all plots
+metrics <- c("mb", "me", "rmse", "R", "d")
+metrics_lim <-
+  list(mb = range(skills$mb, na.rm = TRUE),
+       me = range(skills$me, na.rm = TRUE),
+       rmse = range(skills$rmse, na.rm = TRUE),
+       R = c(0, 1),
+       d = c(0, 1))
+
+#### Define combination
+# We create all plots for each hypothetical study system
+# (i.e., combination of movement and detection probability parameters)
+# Update combination == 1L or combination == 2L here to create plots for different study systems
+# png_name() handles file names accordingly
+comb <- 1L
+unique(skills$combination)
+skills <-
+  skills |>
+  filter(combination == comb) |>
+  as.data.table()
+sims <-
+  sims |>
+  filter(combination == comb) |>
+  as.data.table()
+# Define function for combination-specific names
+png_name <- function(name) {
+  stopifnot(length(unique(skills$combination)) == 1L)
+  paste0(name, "-",  skills$combination[1], ".png")
+}
+
 
 #########################
 #########################
 #### Maps of space use
 
 #### Select simulations
-# Use specific combination, two receiver levels, one array/path realisation
+# For specific combination, select two receiver levels, one array/path realisation
 sims_for_maps <-
   sims |>
-  filter(combination == 1L) |>
   filter(n_receiver %in% nr) |>
   filter(array_realisation == 1L & path_realisation == 1L) |>
   arrange(arrangement, n_receiver) |>
@@ -180,15 +197,15 @@ if (FALSE) {
 #### Barplots of error statistics
 # (selected barplots for maps)
 
-# Define type
-# * A subset of algorithms (as in the main text figure)
-# * All algorithms (as in the supporting map)
+#### Define plot type (full, all algorithms; partial, a subset)
+# * full = all algorithms (as in the supporting map)
+# * partial = a subset of algorithms (as in the main text figure)
 type  <- "full"
 width <- 3
-# type  <- "partial"
-# width <- 2.5
+type  <- "partial"
+width <- 2.5
 
-# Define dataset
+#### Define dataset
 skills_for_bars <-
   skills |>
   filter(id %in% sims_for_maps$id) |>
@@ -199,10 +216,8 @@ if (type == "partial") {
     filter(alg %in% c("COA(30)", "RSP(1)", "ACPF(S)", "ACDCPF(S)")) |>
     as.data.table()
 }
-# Define common y axis limit data
-ydata <- range(skills_for_bars$me, na.rm = TRUE)
 
-# Build image
+#### Build figure
 png(here_fig("performance", png_name(paste0("map-barplot-", type))),
     height = 8, width = width, units = "in", res = 600)
 pp <- par(mfrow = c(4, 1),
@@ -222,8 +237,8 @@ pbapply::pblapply(1:4, function(i) {
   axis_ls <- pretty_plot(sk$x,
                          sk$me,
                          xlim = c(0.5, max(sk$x) + 0.5),
-                         pretty_axis = list(x = list(x = sk$x, y = ydata),
-                                            axis = list(list(side = 1,
+                         ylim = metrics_lim[["me"]],
+                         pretty_axis = list(axis = list(list(side = 1,
                                                              at = sk$x,
                                                              labels = sk$label),
                                                         list(NULL))
@@ -249,11 +264,6 @@ dev.off()
 #########################
 #### Boxplots of error statistics
 
-#
-# TO DO
-# * Set common y axis limits by column
-#
-
 #### Select simulations
 # Define arrays
 combs <- CJ(arrangement = c("random", "regular"),
@@ -261,7 +271,6 @@ combs <- CJ(arrangement = c("random", "regular"),
 # Define simulations
 sims_for_skill <-
   sims |>
-  filter(combination == 1L) |>
   filter(n_receiver %in% nr) |>
   arrange(arrangement, n_receiver) |>
   as.data.table()
@@ -291,6 +300,16 @@ lapply(1:4, function(i) {
                    pretty_axis_args = list(side = 1:2, pretty = list(list(n = 100), list(n = 5))),
                    las = TRUE,
                    xlab = "", ylab = "")
+    # Add helpful lines
+    if (FALSE) {
+      if (metric == "mb") {
+        lines(c(0.5, 9.5), c(0, 0), lty = 2, lwd = 0.75, col = "darkgrey")
+      }
+      if (metric %in% c("R", "d")) {
+        lines(c(0.5, 9.5), c(1, 1), lty = 2, lwd = 0.75, col = "darkgrey")
+      }
+    }
+
   }) |> invisible()
 }) |> invisible()
 dev.off()
@@ -300,7 +319,7 @@ dev.off()
 #########################
 #### Trends
 
-# TO DO
+# (optional) TO DO
 # * use n_receivers or detection coverage here
 
 #### (optional) Subset algorithms for improved clarity on plot
@@ -312,7 +331,7 @@ skills_for_trends <-
 combs <- unique(sims$combination)
 nc    <- length(unique(sims$combination))
 
-
+#### Build figure
 png(here_fig("performance", "relationships.png"),
     height = 4 * nc, width = 12, units = "in", res = 600)
 pp <- par(mfrow = c(nc * 2, length(metrics)), oma = c(1, 3, 1, 1), mar = rep(2, 4))
@@ -331,6 +350,7 @@ lapply(combs, function(combination) {
       x <- sk$n_receiver + rnorm(nrow(sk), 0, 1)
       y <- sk[[metric]]
       pretty_plot(x, y,
+                  ylim = metrics_lim[[metric]],
                   col = scales::alpha(sk$col, 0.25),
                   xlab = "", ylab = "",
                   cex = 0.5, lwd = 0.5)
@@ -347,7 +367,6 @@ dev.off()
 
 # Check colours
 algs
-
 
 
 #### End of code.
