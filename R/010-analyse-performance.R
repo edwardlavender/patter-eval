@@ -41,6 +41,7 @@ skills <- readRDS(here_data("sims", "synthesis", "skill.rds"))
 #### Define algorithms
 # Define algorithms (subset)
 algs <- data.frame(alg = c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)"),
+                   alg_name = c("Null", "COA", "COA", "RSP", "RSP", "ACPF", "ACDCPF", "ACPF", "ACDCPF"),
                    col_name = c("dimgrey", "red", "darkred", "orange", "darkorange", "slateblue1", "slateblue4", "lightgreen", "darkgreen")
                    )
 algs$col <- scales::alpha(algs$col_name, 0.5)
@@ -71,6 +72,7 @@ metrics_lim <-
 # png_name() handles file names accordingly
 comb <- 1L
 unique(skills$combination)
+skills_all <- copy(skills)
 skills <-
   skills |>
   filter(combination == comb) |>
@@ -325,11 +327,12 @@ dev.off()
 #### (optional) Subset algorithms for improved clarity on plot
 unique(skills$alg)
 skills_for_trends <-
-  skills |>
+  skills_all |>
   filter(alg %in% c("Null", "COA(30)", "RSP(1)", "ACPF(S)", "ACDCPF(S)")) |>
   as.data.table()
-combs <- unique(sims$combination)
-nc    <- length(unique(sims$combination))
+combs <- unique(skills_for_trends$combination)
+nc    <- length(unique(skills_for_trends$combination))
+table(skills_for_trends$arrangement, skills_for_trends$n_receiver)
 
 #### Build figure
 png(here_fig("performance", "relationships.png"),
@@ -365,8 +368,29 @@ lapply(combs, function(combination) {
 }) |> invisible()
 dev.off()
 
-# Check colours
-algs
+
+#### Algorithm colour legend
+png(here_fig("colour-scheme-algs.png"),
+    height = 6, width = 3, units = "in", res = 600)
+# (optional) Define subset of relevant algorithms
+algs_legend <- algs |> filter(alg %in% skills_for_trends$alg)
+# Define legend labels as a list of expressions (NULL^1, COA^2) etc., as in maps
+algs_legend_label <- list()
+for (i in seq_len(nrow(algs_legend))) {
+  algs_legend_label[[i]] <- bquote(.(algs_legend$alg_name[i])^.(algs_legend$label[i]))
+}
+# Make plot
+plot(0, type = "n", axes = FALSE, xlab = "", ylab = "")
+legend("top",
+       pch = 21,
+       lty = 1,
+       legend = algs_legend_label,
+       col = algs_legend$col,
+       pt.bg = scales::alpha(algs_legend$col, 0.25),
+       cex = 1.5,
+       y.intersp = 1.5
+       )
+dev.off()
 
 
 #### End of code.
