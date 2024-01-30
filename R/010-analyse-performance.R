@@ -72,18 +72,18 @@ skills <-
 #########################
 #### Maps of space use
 
-# Make maps (~37 s)
-if (TRUE) {
+#### Select simulations
+# Use specific combination, two receiver levels, one array/path realisation
+sims_for_maps <-
+  sims |>
+  filter(combination == 1L) |>
+  filter(n_receiver %in% nr) |>
+  filter(array_realisation == 1L & path_realisation == 1L) |>
+  arrange(arrangement, n_receiver) |>
+  as.data.table()
 
-  #### Select simulations
-  # Use specific combination, two receiver levels, one array/path realisation
-  sims_for_maps <-
-    sims |>
-    filter(combination == 1L) |>
-    filter(n_receiver %in% nr) |>
-    filter(array_realisation == 1L & path_realisation == 1L) |>
-    arrange(arrangement, n_receiver) |>
-    as.data.table()
+#### Make maps (~37 s)
+if (FALSE) {
 
   #### Set up plot
   # The figure will be annotated outside of R
@@ -174,6 +174,7 @@ if (TRUE) {
 
 }
 
+
 #########################
 #########################
 #### Barplots of error statistics
@@ -183,7 +184,7 @@ if (TRUE) {
 # * A subset of algorithms (as in the main text figure)
 # * All algorithms (as in the supporting map)
 type  <- "full"
-width <- 4
+width <- 3
 # type  <- "partial"
 # width <- 2.5
 
@@ -247,6 +248,11 @@ dev.off()
 #########################
 #########################
 #### Boxplots of error statistics
+
+#
+# TO DO
+# * Set common y axis limits by column
+#
 
 #### Select simulations
 # Define arrays
