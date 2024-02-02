@@ -98,7 +98,7 @@ sims_for_maps <-
   sims |>
   filter(n_receiver %in% nr) |>
   filter(array_realisation == 1L & path_realisation == 1L) |>
-  arrange(arrangement, n_receiver) |>
+  arrange(n_receiver, arrangement) |>
   as.data.table()
 
 #### Make maps (~37 s)
@@ -211,6 +211,7 @@ width <- 2.5
 skills_for_bars <-
   skills |>
   filter(id %in% sims_for_maps$id) |>
+  arrange(n_receiver, arrangement, label) |>
   as.data.table()
 if (type == "partial") {
   skills_for_bars <-
@@ -268,13 +269,15 @@ dev.off()
 
 #### Select simulations
 # Define arrays
-combs <- CJ(arrangement = c("random", "regular"),
-            n_receiver = nr)
+combs <-
+  CJ(arrangement = c("random", "regular"),
+     n_receiver = nr) |>
+  arrange(n_receiver, arrangement)
 # Define simulations
 sims_for_skill <-
   sims |>
   filter(n_receiver %in% nr) |>
-  arrange(arrangement, n_receiver) |>
+  arrange(n_receiver, arrangement) |>
   as.data.table()
 
 #### Visualise boxplots
@@ -285,7 +288,7 @@ pp <- par(mfrow = c(4, length(metrics)),
 lapply(1:4, function(i) {
   # Define skill scores across path realisations
   skill <- skills[id %in%
-                  sims_for_skill[arrangement == combs$arrangement[i] & n_receiver == combs$n_receiver[i], ]$id
+                  sims_for_skill[n_receiver == combs$n_receiver[i] & arrangement == combs$arrangement[i], ]$id
                   ]
 
   # Visualise distribution of error scores (by metric)
@@ -373,7 +376,8 @@ dev.off()
 png(here_fig("colour-scheme-algs.png"),
     height = 6, width = 3, units = "in", res = 600)
 # (optional) Define subset of relevant algorithms
-algs_legend <- algs |> filter(alg %in% skills_for_trends$alg)
+# algs_legend <- algs |> filter(alg %in% skills_for_trends$alg)
+algs_legend <- algs
 # Define legend labels as a list of expressions (NULL^1, COA^2) etc., as in maps
 algs_legend_label <- list()
 for (i in seq_len(nrow(algs_legend))) {
