@@ -61,14 +61,18 @@ terra::inMemory(spat)
 
 tic()
 convergence <-
-  cl_lapply(
-    split(sims, seq_len(nrow(sims))),
-    .cl = nrow(sims),
-    .chunk = FALSE,
-    .fun = function(sim, .chunkargs) {
+  pbapply::pblapply(
+    X = split(sims, seq_len(nrow(sims))),
+    cl = NULL, # floor(nrow(sims) / 2L),
+    FUN = function(sim) {
 
       #### Define simulation
       # sim   <- sims[1, ]
+      print(sim$row)
+      out_file <- here_data("sims", "output", "debug", "patter", "convergence", paste0(sim$row, ".rds"))
+      if (file.exists(out_file)) {
+        return(readRDS(out_file))
+      }
 
       #### Set up data list and observations
       # (This code is copied from workflow_patter())
@@ -91,7 +95,7 @@ convergence <-
       obs[, depth_deep := obs$depth + 5]
 
       #### Define arguments for forward run
-      # (THis code is copied from get_ud_patter())
+      # (This code is copied from get_ud_patter())
       rargs <- list(.shape = sim$shape, .scale = sim$scale,
                     .mobility = sim$mobility)
       dargs <- list(.shape = sim$shape, .scale = sim$scale,
@@ -110,14 +114,13 @@ convergence <-
       # Define starting 'success'
       s     <- FALSE
       ns    <- c(1e3L, 1e4L, 1e5L)
-      n     <- ns[1L]
-      count <- 0L
+      count <- 1L
       # Run forward simulation until convergence is achieved
-      while (isFALSE(s) & n <= max(ns)) {
-        # Define number of particles
-        count <- count + 1L
-        n <- ns[count]
+      while (isFALSE(s) && count <= length(ns)) {
         # Run simulation
+        print(count)
+        n <- ns[count]
+        print(n)
         tic()
         ssf()
         out_pff  <- pf_forward(.obs = obs,
@@ -127,6 +130,7 @@ convergence <-
                                .likelihood = lik,
                                .n = n,
                                .record = record,
+                               .control = pf_opt_control(.sampler_batch_size = 1000L),
                                .verbose = here_data("sims", "output", "log", "patter", "performance-debug",
                                                     paste0(sim$row, "-", n, ".txt")))
         toc()
@@ -136,11 +140,14 @@ convergence <-
         out[[count]] <- data.frame(row = sim$row,
                                    n = n,
                                    success = s)
+        # Update loop controls
+        count <- count + 1L
       }
 
       #### Return outputs
-      rbindlist(out)
-
+      out <- rbindlist(out)
+      saveRDS(out, out_file)
+      out
     })
 toc()
 
