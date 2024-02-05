@@ -202,7 +202,9 @@ stopifnot(nrow(sim) == 1L)
 # * in this instance the only patch is on the other side of the study area
 ## 897:
 # Forward simulation:
-# * 1e6 particles: ~5.5 mins (fail)
+# * 1e6 particles: ~6.7 mins (fail @ 667)
+# Cause:
+# * As above, particles in (correct) NE corner killed off shortly after time step 640
 
 #### Read data
 path     <- read_path(sim)
@@ -267,6 +269,7 @@ toc()
 # (1e3 particles: ~55s, 20 cl)
 # (1e6 particles: 3 mins, 50 cl)
 tic()
+dir.create(here_fig("debug", sim$row))
 pf_plot_history(.dlist = dlist,
                 .steps = NULL,
                 .forward = file.path(tempdir(), "history"),
