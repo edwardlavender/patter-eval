@@ -172,6 +172,7 @@ get_ud_patter <- function(sim,
                          .dargs = dargs,
                          .likelihood = lik,
                          .n = sim$n_particles,
+                         .control = pf_opt_control(.sampler_batch_size = 1000L),
                          .record = record,
                          .verbose = FALSE)
   t2_pff   <- Sys.time()
