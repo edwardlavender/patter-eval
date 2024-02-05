@@ -69,7 +69,8 @@ convergence <-
 
       #### Define simulation
       # sim   <- sims[1, ]
-      print(sim$row)
+      print(paste0(rep("-", 50), collapse = ""))
+      message(sim$row)
       out_file <- here_data("sims", "output", "debug", "patter", "convergence", paste0(sim$row, ".rds"))
       if (file.exists(out_file)) {
         return(readRDS(out_file))
@@ -119,9 +120,8 @@ convergence <-
       # Run forward simulation until convergence is achieved
       while (isFALSE(s) && count <= length(ns)) {
         # Run simulation
-        print(count)
         n <- ns[count]
-        print(n)
+        print(paste("n:", n))
         tic()
         ssf()
         out_pff  <- pf_forward(.obs = obs,
@@ -165,7 +165,20 @@ cdt |>
   group_by(row) |>
   arrange(n, .by_group = TRUE) |>
   slice_tail(n = 1L) |>
+  ungroup() |>
+  arrange(desc(success), n, row) |>
   as.data.table()
+
+# Successes:
+# * 14/16 successes
+# * 5/16 require 1000 particles
+# * 6/16 require 10000 particles
+# * 1/16 require 100000 particles
+# * 2/16 failures (see below)
+
+# Failures:
+# * 602: time step 649
+# * 897: time step 667
 
 
 #########################
@@ -173,8 +186,23 @@ cdt |>
 #### Debugging
 
 #### Define simulation
-# * row 602 struggles to converge (position ~649)
-sim <- sims[row == 602, ]
+# sim <- sims[row == 602, ]
+sim <- sims[row == 897, ]
+stopifnot(nrow(sim) == 1L)
+
+#### Results
+## 602:
+# Forward simulation:
+# * 1e6 particles: ~5.5 mins (fail)
+# Cause:
+# * At time step 554, the last particles in the vicinity of the true position die
+# * This may be partly related to the true position being near the boundaries of the study area
+# * Importantly, once the right patch of particles dies, it is very difficult for the algorithm to recover
+# * B/c there are no particles in the right vicinity
+# * in this instance the only patch is on the other side of the study area
+## 897:
+# Forward simulation:
+# * 1e6 particles: ~5.5 mins (fail)
 
 #### Read data
 path     <- read_path(sim)
@@ -219,9 +247,6 @@ lik <-  list(pf_lik_dc = pf_lik_dc,
              pf_lik_ac = pf_lik_ac)
 record <- pf_opt_record(.save = TRUE)
 # Run forward simulation
-# * 1e4 particles: ~41 s (fail)
-# * 1e6 particles: ~1.5 mins (fail)
-# * 1e6 particles: ~5.5 mins (fail)
 tic()
 ssf()
 out_pff  <- pf_forward(.obs = obs,
@@ -233,25 +258,19 @@ out_pff  <- pf_forward(.obs = obs,
                        .record = pf_opt_record(.sink = tempdir()),
                        .trial = pf_opt_trial(.trial_sampler = FALSE),
                        .verbose = TRUE)
-
 toc()
 
 #### Examine diagnostics
 # TO DO
 
-#### Plot particle samples
+#### Plot particle samples (~3 mins, 50 cl, 1e6 particles)
 # (1e3 particles: ~55s, 20 cl)
 # (1e6 particles: 3 mins, 50 cl)
-# At time step 554, the last particles in the vicinity of the true position die
-# This may be partly related to the true position being near the boundaries of the study area
-# Importantly, once the right patch of particles dies, it is very difficult for the algorithm to recover
-# B/c there are no particles in the right vicinity
-# in this instance the only patch is on the other side of the study area
 tic()
 pf_plot_history(.dlist = dlist,
                 .steps = NULL,
                 .forward = file.path(tempdir(), "history"),
-                .png = list(filename = here_fig("debug", "602")),
+                .png = list(filename = here_fig("debug", sim$row)),
                 .add_forward = list(pch = 21, col = "red", bg = "red", cex = 0.25),
                 .add_layer = function(t) {
                   # Plot true path
