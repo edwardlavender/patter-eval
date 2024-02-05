@@ -160,7 +160,7 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
 # This code has to be run non interactively to avoid prompts.
 tic()
 dir.create(here_data("sims", "input", "actel"))
-system("R CMD BATCH --no-save --no-restore ./R/003-process-data-rsp.R ./data/sims/input/actel/log.txt")
+system("R CMD BATCH --no-save --no-restore ./R/004-process-data-rsp.R ./data/sims/input/actel/log.txt")
 toc()
 
 
