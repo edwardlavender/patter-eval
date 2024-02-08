@@ -2,6 +2,13 @@
 # utils.add::load_internal_functions("patter")
 check_dlist         <- patter:::check_dlist
 
+#' @title {patter} helpers
+
+acs_setup_receiver_key <-
+  function(.receiver) {
+    paste(sort(unlist(.receiver)), collapse = "-")
+  }
+
 #' @title Proposal densities
 
 pf_dpropose_read <- function(.particles, .obs, .t, .dlist) {
