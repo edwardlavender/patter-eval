@@ -187,7 +187,7 @@ cdt |>
 
 #### Define simulation
 # sim <- sims[row == 602, ]
-sim <- sims[row == 897, ]
+sim <- sims[row == 602, ]
 stopifnot(nrow(sim) == 1L)
 
 #### Results
@@ -219,11 +219,9 @@ text(moorings$receiver_easting, moorings$receiver_northing, moorings$receiver_id
 
 #### Plot acoustic and archival observations
 acc
-# plot(acc$timestep, rep(1, nrow(acc)))
 plot(dlist$data$archival$timestep,
      dlist$data$archival$depth * -1, type = "l",
      ylim = c(-350, 0))
-
 points(dlist$data$acoustics$timestep, rep(1, nrow(acc)))
 
 #### Run the forward simulation for this individual (~52 s)
@@ -256,9 +254,10 @@ out_pff  <- pf_forward(.obs = obs,
                        .rargs = rargs,
                        .dargs = dargs,
                        .likelihood = lik,
-                       .n = 1e6L,
+                       .n = 1e3L,
                        .record = pf_opt_record(.sink = tempdir()),
-                       .trial = pf_opt_trial(.trial_sampler = FALSE),
+                       .trial = pf_opt_trial(.trial_sampler = FALSE,
+                                             .trial_kick = 50L),
                        .verbose = TRUE)
 toc()
 
