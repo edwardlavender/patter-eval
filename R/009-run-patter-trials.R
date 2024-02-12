@@ -64,8 +64,8 @@ obs <- pf_setup_obs(.dlist = dlist,
 # * We adjust mobility here to account for the discretisation error
 obs[, mobility := mobility + sr]
 # Include depths
-obs[, depth_shallow := obs$depth - 5]
-obs[, depth_deep := obs$depth + 5]
+obs[, depth_shallow_eps := 5]
+obs[, depth_deep_eps := 5]
 
 #### Define proposal functions
 rargs <- list(.shape = sim$shape, .scale = sim$scale,
@@ -107,6 +107,7 @@ toc()
 #### pf_backward_sampler_v(): 4m 21s (siam-linux20)
 if (TRUE) {
   t0_start <- Sys.time()
+  ssf()
   out_0 <-
     pf_backward_sampler_v(.history = out_pff$history,
                           .dpropose = pf_dpropose,
@@ -123,6 +124,7 @@ if (TRUE) {
 if (TRUE) {
   dlist$algorithm$sim <- sim
   t1_start <- Sys.time()
+  ssf()
   out_1 <- pf_backward_sampler_p(.history = out_pff$history,
                                  .dpropose = pf_dpropose_read,
                                  .obs = obs,
@@ -137,6 +139,7 @@ if (TRUE) {
 #### pf_backward_sampler_p_fst() with .read = TRUE:
 if (TRUE) {
   t2_start <- Sys.time()
+  ssf()
   out_2 <- pf_backward_sampler_p_fst(.history = out_pff$history,
                                      .dlist = dlist,
                                      .read = TRUE)
@@ -147,6 +150,7 @@ if (TRUE) {
 #### pf_backward_sampler_p_fst() with .read = FALSE:
 if (TRUE) {
   t3_start <- Sys.time()
+  ssf()
   out_3 <- pf_backward_sampler_p_fst(.history = out_pff$history,
                                      .dlist = dlist,
                                      .read = FALSE)
@@ -155,7 +159,25 @@ if (TRUE) {
 }
 
 #### pf_backward_sampler_cpp()
-# TO DO
+if (TRUE) {
+  # Compile C++ code
+  Rcpp::sourceCpp(here_src("cpp", "pf_backward_sampler_cpp.cpp"))
+  # Define list of coordinate matrices
+  pxy <- lapply(out_pff$history, function(elm) {
+    as.matrix(elm[, .(x_now, y_now)])
+  })
+  # Define path matrix
+  # * One column per particle
+  # * Two columns per time step
+  t4_start <- Sys.time()
+  ssf()
+  out_4 <- pf_backward_sampler_cpp(particles = pxy,
+                                   shape = sim$shape,
+                                   scale = sim$scale,
+                                   mobility = sim$mobility)
+  t4_end <- Sys.time()
+  difftime(t4_end, t4_start)
+}
 
 
 #### End of code.
