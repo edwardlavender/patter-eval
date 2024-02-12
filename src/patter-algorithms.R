@@ -11,7 +11,7 @@ acs_setup_receiver_key <-
 
 #' @title Proposal densities
 
-pf_dpropose_read <- function(.particles, .obs, .t, .dlist) {
+pf_dpropose_read <- function(.particles, .obs, .t, .dlist, .drop) {
   # Check inputs
   if (.t == max(.obs$timestep)) {
     check_dlist(.dlist = .dlist,
@@ -26,5 +26,8 @@ pf_dpropose_read <- function(.particles, .obs, .t, .dlist) {
   # Match densities & return .particles with a 'dens' column
   # * This behaviour matches pf_dpropose()
   .particles[, dens := spat_dens[match(.particles$cell_past, spat_dens$cell)]$dens]
-  .particles[which(dens > 0), ]
+  if (.drop) {
+    .particles <- .particles[which(dens > 0), ]
+  }
+  .particles
 }
