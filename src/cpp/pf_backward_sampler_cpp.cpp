@@ -80,7 +80,7 @@ NumericVector sample_cpp(NumericMatrix ppast, NumericVector dens) {
 
 //' @title Backward sampling algorithm
 //' @param particles A list of particle matrices, with one element for each time step. Each matrix should contain x and y columns.
-//' @details (optional) TO DO. Handle particle weights.
+//' @details (optional) TO DO. Handle irregular resampling, if required.
 //' @value The function returns a numeric matrix of matrix, with one row for each path and one column for each time step.
 // [[Rcpp::export]]
 
