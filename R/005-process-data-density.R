@@ -2,6 +2,11 @@
 #########################
 #### process-data-density.R
 
+#### DEPRECATED
+# This code is no longer required
+# Precalculation was not beneficial (see run-patter-trials.R)
+# A custom backwards sampling routine is used
+
 #### Aims
 # 1) Improve speed of the backward sampler via precalculation of movement densities:
 # * The backward sampler is expensive.
