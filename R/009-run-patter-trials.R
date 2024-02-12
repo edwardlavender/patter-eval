@@ -105,8 +105,9 @@ toc()
 #### Backward run comparisons
 
 #### pf_backward_sampler_v(): 4m 21s (siam-linux20)
-if (FALSE) {
-  out_pfbs <-
+if (TRUE) {
+  t0_start <- Sys.time()
+  out_0 <-
     pf_backward_sampler_v(.history = out_pff$history,
                           .dpropose = pf_dpropose,
                           .obs = obs,
@@ -114,33 +115,43 @@ if (FALSE) {
                           .dargs = dargs,
                           .record = record,
                           .verbose = FALSE)
-  out_pfbs$time$duration
+  t0_end <- Sys.time()
+  difftime(t0_end, t0_start)
 }
 
 #### pf_backward_sampler_p():
-if (FALSE) {
+if (TRUE) {
   dlist$algorithm$sim <- sim
-  out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
-                                    .dpropose = pf_dpropose_read,
-                                    .obs = obs,
-                                    .dlist = dlist,
-                                    .dargs = list(),
-                                    .record = record,
-                                    .verbose = TRUE)
+  t1_start <- Sys.time()
+  out_1 <- pf_backward_sampler_p(.history = out_pff$history,
+                                 .dpropose = pf_dpropose_read,
+                                 .obs = obs,
+                                 .dlist = dlist,
+                                 .dargs = list(),
+                                 .record = record,
+                                 .verbose = FALSE)
+  t1_end <- Sys.time()
+  difftime(t1_end, t1_start)
 }
 
 #### pf_backward_sampler_p_fst() with .read = TRUE:
-if (FALSE) {
-  out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
-                                        .dlist = dlist,
-                                        .read = TRUE)
+if (TRUE) {
+  t2_start <- Sys.time()
+  out_2 <- pf_backward_sampler_p_fst(.history = out_pff$history,
+                                     .dlist = dlist,
+                                     .read = TRUE)
+  t2_end <- Sys.time()
+  difftime(t2_end, t2_start)
 }
 
 #### pf_backward_sampler_p_fst() with .read = FALSE:
-if (FALSE) {
-  out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
-                                        .dlist = dlist,
-                                        .read = FALSE)
+if (TRUE) {
+  t3_start <- Sys.time()
+  out_3 <- pf_backward_sampler_p_fst(.history = out_pff$history,
+                                     .dlist = dlist,
+                                     .read = FALSE)
+  t3_end <- Sys.time()
+  difftime(t3_end, t3_start)
 }
 
 #### pf_backward_sampler_cpp()
