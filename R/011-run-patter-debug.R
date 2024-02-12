@@ -131,7 +131,8 @@ convergence <-
                                .likelihood = lik,
                                .n = n,
                                .record = record,
-                               .trial = pf_opt_trial(.trial_sampler = FALSE),
+                               .trial = pf_opt_trial(.trial_sampler = 0L,
+                                                     .trial_resample_crit = 0L),
                                # .control = pf_opt_control(.sampler_batch_size = 1000L),
                                .verbose = here_data("sims", "output", "log", "patter", "performance-debug",
                                                     paste0(sim$row, "-", n, ".txt")))
@@ -257,6 +258,7 @@ out_pff  <- pf_forward(.obs = obs,
                        .n = 1e3L,
                        .record = pf_opt_record(.sink = tempdir()),
                        .trial = pf_opt_trial(.trial_sampler = FALSE,
+                                             .trial_resample_crit = 0L,
                                              .trial_kick = 50L),
                        .verbose = TRUE)
 toc()

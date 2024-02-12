@@ -172,6 +172,7 @@ get_ud_patter <- function(sim,
                          .dargs = dargs,
                          .likelihood = lik,
                          .n = sim$n_particles,
+                         .trial = pf_opt_trial(.trial_resample_crit = 0L),
                          .control = pf_opt_control(.sampler_batch_size = 1000L),
                          .record = record,
                          .verbose = FALSE)

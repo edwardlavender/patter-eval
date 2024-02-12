@@ -87,7 +87,8 @@ lik <-  list(pf_lik_dc = pf_lik_dc,
 #### Control options
 n       <- 1000L
 trial   <- pf_opt_trial(.trial_sampler = FALSE,
-                        .trial_revert = 0L)
+                        .trial_revert = 0L,
+                        .trial_resample_crit = 0L)
 record  <- pf_opt_record(.save = TRUE,
                          .sink = file.path(sink, "forward", "fwd"))
 verbose <- file.path(sink, "forward", "fwd", "log-1.txt")

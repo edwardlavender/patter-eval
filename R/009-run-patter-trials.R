@@ -91,6 +91,7 @@ out_pff  <- pf_forward(.obs = obs,
                        .dargs = dargs,
                        .likelihood = lik,
                        .n = sim$n_particles,
+                       .trial = pf_opt_trial(.trial_resample_crit = 0L),
                        .control = control,
                        .record = record,
                        .verbose = FALSE)
