@@ -100,15 +100,17 @@ toc()
 #### Backward run comparisons
 
 #### pf_backward_sampler_v(): 4m 21s (siam-linux20)
-out_pfbs <-
-  pf_backward_sampler_v(.history = out_pff$history,
-                        .dpropose = pf_dpropose,
-                        .obs = obs,
-                        .dlist = dlist,
-                        .dargs = dargs,
-                        .record = record,
-                        .verbose = FALSE)
-out_pfbs$time$duration
+if (FALSE) {
+  out_pfbs <-
+    pf_backward_sampler_v(.history = out_pff$history,
+                          .dpropose = pf_dpropose,
+                          .obs = obs,
+                          .dlist = dlist,
+                          .dargs = dargs,
+                          .record = record,
+                          .verbose = FALSE)
+  out_pfbs$time$duration
+}
 
 #### pf_backward_sampler_p(): VERY SLOW
 if (FALSE) {
@@ -129,12 +131,12 @@ if (FALSE) {
                                         .read = TRUE)
 }
 
-#### pf_backward_sampler_p_fst() with .read = FALSE: ~8 mins (?)
-# Error in sample.int(length(dens), size = 1L, prob = dens) : too few positive probabilities
-out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
-                                      .dlist = dlist,
-                                      .read = FALSE)
-
+#### pf_backward_sampler_p_fst() with .read = FALSE: ~23 mins with print() statement
+if (FALSE) {
+  out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
+                                        .dlist = dlist,
+                                        .read = FALSE)
+}
 
 #### pf_backward_sampler_cpp()
 
