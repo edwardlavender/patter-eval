@@ -36,6 +36,7 @@ pf_backward_sampler_p_fst <- function(.history, .dlist, .read = TRUE) {
         for (t in n_step:2) {
 
           # Define previous time step
+          print(glue::glue("Particle {i} (timestep {t}"))
           tp <- t - 1L
 
           # Read or calculate step densities
