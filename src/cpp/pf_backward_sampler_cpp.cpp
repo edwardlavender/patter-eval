@@ -104,13 +104,14 @@ NumericMatrix pf_backward_sampler_cpp(List particles, double shape, double scale
   for (int i = 0; i < np; ++i) {
 
     // Initiate loop with final coordinates
+    // Rcpp::Rcout << "Particle " << i + 1 << std::endl;
     paths(i, nc - 2) = pfinal(i, 0);
     paths(i, nc - 1) = pfinal(i, 1);
 
     // Loop backwards over time steps
     for (int j = nt; j >= 2; --j) {
 
-      Rcpp::Rcout << "Particle " << i + 1 << " (" << "timestep " << j << ")" << std::endl;
+      // Rcpp::Rcout << "Particle " << i + 1 << " (" << "timestep " << j << ")" << std::endl;
 
       // Define matrix indices
       int iy_now = j * 2 - 1;
@@ -120,7 +121,7 @@ NumericMatrix pf_backward_sampler_cpp(List particles, double shape, double scale
 
       // Identify current particle coordinates
       NumericVector pnow = NumericVector::create(paths(i, ix_now), paths(i, iy_now));
-      Rcpp::Rcout << pnow << std::endl;
+      // Rcpp::Rcout << pnow << std::endl;
 
       // Identify previous particles coordinates
       // j is time step of current element; j - 1 is corresponding index; previous particles are in j - 2
