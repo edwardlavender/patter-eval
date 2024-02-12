@@ -6,6 +6,7 @@ data-raw/
 data/*
 !data/inst
 dev/03-secrets.R
+R/dev/Stan/
 R/deprecated/
 Stan/
 bin/
