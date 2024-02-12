@@ -1,9 +1,13 @@
 #########################
 #########################
-#### pf_backward-speed.R
+#### run-patter-trials.R
 
 #### Aims
-# 1) Compare the speeds of alternative backward sampling routines
+# 1) Run patter time trials
+# * The backward sampler is an expensive algorithm
+# * Here, we compare the speeds of alternative implementations of the algorithm
+# * This code supports, in particular, the large number of sensitivity
+# * analyses we need to implement
 
 #### Prerequisites
 # 1) Develop {patter} workflow
@@ -112,7 +116,7 @@ if (FALSE) {
   out_pfbs$time$duration
 }
 
-#### pf_backward_sampler_p(): VERY SLOW
+#### pf_backward_sampler_p():
 if (FALSE) {
   dlist$algorithm$sim <- sim
   out_pfbs <- pf_backward_sampler_p(.history = out_pff$history,
@@ -124,14 +128,14 @@ if (FALSE) {
                                     .verbose = TRUE)
 }
 
-#### pf_backward_sampler_p_fst() with .read = TRUE: ~35 mins (?)
+#### pf_backward_sampler_p_fst() with .read = TRUE:
 if (FALSE) {
   out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
                                         .dlist = dlist,
                                         .read = TRUE)
 }
 
-#### pf_backward_sampler_p_fst() with .read = FALSE: ~23 mins with print() statement
+#### pf_backward_sampler_p_fst() with .read = FALSE:
 if (FALSE) {
   out_pfbs <- pf_backward_sampler_p_fst(.history = out_pff$history,
                                         .dlist = dlist,
@@ -139,7 +143,7 @@ if (FALSE) {
 }
 
 #### pf_backward_sampler_cpp()
-
+# TO DO
 
 
 #### End of code.
