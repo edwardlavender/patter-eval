@@ -4,7 +4,7 @@
 
 #### DEPRECATED
 # This code is no longer required
-# Precalculation was not beneficial (see run-patter-trials.R)
+# Pre-calculation was not beneficial (see run-patter-trials.R)
 # A custom backwards sampling routine is used
 
 #### Aims
