@@ -5,16 +5,8 @@ using namespace Rcpp;
 
 NumericVector dtruncgamma_cpp(NumericVector x, double shape = 15, double scale = 15, double mobility = 500) {
   int n = x.size();
-  NumericVector tt(n);
-
-  for (int i = 0; i < n; ++i) {
-    if (x[i] <= mobility) {
-      tt[i] = R::dgamma(x[i], shape, scale, 0) / (R::pgamma(mobility, shape, scale, 1, 0));
-    } else {
-      x[i] = 0;
-    }
-  }
-
+  double denom = R::pgamma(mobility, shape, scale, 1, 0);
+  NumericVector tt = ifelse(x <= mobility, dgamma(x, shape, scale) / denom, 0);
   return tt;
 }
 
@@ -120,7 +112,7 @@ NumericMatrix pf_backward_sampler_cpp(List particles, double shape, double scale
 
       // Identify current particle coordinates
       NumericVector pnow = NumericVector::create(paths(i, ix_now), paths(i, iy_now));
-      Rcpp::Rcout << pnow << std::endl;
+      // Rcpp::Rcout << pnow << std::endl;
 
       // Identify previous particles coordinates
       // j is time step of current element; j - 1 is corresponding index; previous particles are in j - 2
