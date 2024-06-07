@@ -26,7 +26,7 @@ library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(prettyGraphics)
 library(tictoc)
-dv::src()
+# dv::src()
 
 
 #########################
@@ -56,14 +56,12 @@ dir.create(here_data("sims", "output", "synthesis"))
 
 #### Define study site
 # We define a simple rectangular study site
-# * We formerly used a 5 m grid
-# * A 10 m grid is MUCH faster for most routines
-# * And resultant UDs occupy less disk space
-spat <- spatTemplate(.res = sr,
-                     .value = 1,
-                     .xmin = 0, .xmax = 1e4,
-                     .ymin = 0, .ymax = 1e4,
-                     .crs = crs)
+# * Grid resolution affects the speed for some routines
+# * And required disk space
+spat <- terra::rast(values = 1,
+                    res = sr,
+                    xmin = 0, xmax = 1e4,
+                    ymin = 0, ymax = 1e4)
 terra::ncell(spat)
 # Define uniform ('blank') SpatRaster
 # (used as a NULL model)
