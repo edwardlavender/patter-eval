@@ -32,7 +32,8 @@ dv::src()
 spat       <- terra::rast(here_input("spat.tif"))
 arrays     <- readRDS(here_input("arrays.rds"))
 paths      <- readRDS(here_input("paths.rds"))
-detections <- readRDS(here_input("detections.rds"))
+acoustics  <- qs::qread(here_input("acoustics.qs"))
+detections <- qs::qread(here_input("detections.qs"))
 sims       <- readRDS(here_input("sims.rds"))
 
 
@@ -74,8 +75,9 @@ gammas <-
 
 #########################
 #########################
-#### Prep datasets
+#### Prepare datasets
 
+#
 #
 # TO DO
 # REVIEW THIS CODE WITH RESPECT TO WHAT WE NEED
@@ -100,8 +102,10 @@ pbapply::pblapply(sims_for_arrays_ls, function(sim) {
   TRUE
 }) |> invisible()
 
-#### Acoustics (~14 * 2 s)
+#### Acoustics (0, 1) & detections (1) (~1.5 mins, 10 cl)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
+# * acoustics (0, 1) is required for particle algorithms
+# * detections (1) is required for coa()/rsp()
 sims_for_realisations <-
   sims |>
   group_by(combination,
@@ -111,20 +115,22 @@ sims_for_realisations <-
   as.data.table()
 sims_for_realisations_ls <-
   split(sims_for_realisations, seq_len(nrow(sims_for_realisations)))
-pbapply::pblapply(sims_for_realisations_ls, function(sim) {
+pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
   folder <- here_input("acoustics",
                        sim$combination,
                        sim$array_type, sim$array_realisation,
                        sim$path_realisation)
   dir.create(folder, recursive = TRUE)
-  out <- get_acoustics(sim, detections)
-  qs::qsave(out, file.path(folder, "acoustics.qs"))
+  acc <- get_acoustics(sim, acoustics)
+  det <- get_detections(sim, detections)
+  qs::qsave(acc, file.path(folder, "acoustics.qs"))
+  qs::qsave(det, file.path(folder, "detections.qs"))
   TRUE
 }) |> invisible()
 
 #### Paths (~11 * 2 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
-pbapply::pblapply(sims_for_realisations_ls, function(sim) {
+pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
   folder <- function(top) {
     here_input(top,
                sim$combination,
@@ -132,11 +138,16 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
                sim$path_realisation)
   }
   dir.create(folder("paths"), recursive = TRUE)
-  acoustics <- qs::qread(file.path(folder("acoustics"), "acoustics.qs"))
-  out <- get_path(sim, paths, acoustics)
+  det <- get_detections(sim, detections)
+  out <- get_path(sim, paths, det)
   qs::qsave(out, file.path(folder("paths"), "path.qs"))
   TRUE
 }) |> invisible()
+
+
+#########################
+#########################
+#### Package objects
 
 #### Actel objects (~41 s)
 # This code has to be run non interactively to avoid prompts.
@@ -145,76 +156,9 @@ dir.create(here_data("sims", "input", "actel"))
 system("R CMD BATCH --no-save --no-restore ./R/004-process-data-rsp.R ./data/sims/input/actel/log.txt")
 toc()
 
-
-#########################
-#########################
-#### Prepare AC* inputs
-
-#### Define directories (~7 s)
-# Define folders
-# * ac/{array_type}/{array_realisation}/{gamma}/overlaps.qs
-# * ac/{array_type}/{array_realisation}/{gamma}/{alpha}/{beta}/kernels.qs
-pbapply::pbsapply(split(det_pars_all, seq_len(nrow(det_pars_all))), function(d) {
-  dir.create(here_input("ac", d$array_type, d$array_realisation,
-                        d$gamma, d$alpha, d$beta),
-             recursive = TRUE)
-}) |> invisible()
-
-#### Define detection overlaps (6 s, 10 cl; 28 s, 0 cl)
-gc()
-tic()
-pbapply::pblapply(split(gammas, seq_len(nrow(gammas))), cl = 10L, function(d) {
-  # Isolate array data
-  # d = split(gammas, seq_len(nrow(gammas)))[[1]]
-  out_file <- here_input("ac", d$array_type, d$array_realisation, d$gamma, "overlaps.qs")
-  if (!file.exists(out_file)) {
-    # Define array
-    array <-
-      arrays[[d$array_type]] |>
-      filter(array_id == d$array_realisation) |>
-      mutate(receiver_range = d$gamma) |>
-      as.data.table()
-    # Define data list
-    dlist <- pat_setup_data(.moorings = array,
-                            .bathy = spat,
-                            .lonlat = FALSE)
-    # Define detection containers
-    overlaps   <- acs_setup_detection_overlaps(dlist)
-    qs::qsave(overlaps, out_file)
-    TRUE
-  }
-}) |> invisible()
-toc()
-
-#### Define detection kernels (~5 mins with 10 cl)
-gc()
-tic()
-pbapply::pblapply(split(det_pars_all, seq_len(nrow(det_pars_all))), cl = 10L, function(d) {
-  # Define array data
-  print(paste(d$index, "/", max(det_pars_all$index)))
-  out_file <- here_input("ac", d$array_type, d$array_realisation,
-                         d$gamma, d$alpha, d$beta, "kernels.qs")
-  if (!file.exists(out_file)) {
-    # Define array
-    array <-
-      arrays[[d$array_type]] |>
-      filter(array_id == d$array_realisation) |>
-      mutate(receiver_range = d$gamma) |>
-      as.data.table()
-    # Define data list
-    dlist <- pat_setup_data(.moorings = array,
-                            .bathy = spat,
-                            .lonlat = FALSE)
-    # Define detection kernels
-    kernels <- acs_setup_detection_kernels(dlist,
-                                           .alpha = d$alpha, .beta = d$beta,
-                                           .verbose = FALSE)
-    kernels <- wrapr(kernels)
-    qs::qsave(kernels, out_file)
-  }
-  TRUE
-}) |> invisible()
-toc()
+#### Patter objects
+# Yobs
+# TO DO
 
 
 #########################
@@ -227,7 +171,6 @@ win <- as.owin.SpatRaster(spat, .im = im)
 plot(im)
 plot(win)
 
-qs::qsave(im, here_input("im.qs"))
 qs::qsave(win, here_input("win.qs"))
 
 

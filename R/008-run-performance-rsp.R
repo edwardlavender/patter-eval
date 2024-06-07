@@ -94,7 +94,7 @@ if (interactive()) {
   here_alg(s, "rsp", "default", "ud.tif") |> terra_qplot()
   here_alg(s, "rsp", "custom", "ud.tif") |> terra_qplot()
   m <- read_array(s)
-  points(m$receiver_easting, m$receiver_northing)
+  points(m$receiver_x, m$receiver_y)
   par(pp)
 }
 

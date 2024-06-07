@@ -30,7 +30,7 @@ dv::src()
 #### Load data
 spat       <- terra::rast(here_input("spat.tif"))
 arrays     <- readRDS(here_input("arrays.rds"))
-detections <- readRDS(here_input("detections.rds"))
+detections <- qs::qread(here_input("detections.qs"))
 sims       <- readRDS(here_input("sims.rds"))
 
 
@@ -64,13 +64,13 @@ actel <-
     dir.create(folder, recursive = TRUE)
 
     #### Get data
-    acoustics <- get_acoustics(sim, detections) |> as.data.frame()
-    moorings  <- get_array(sim, arrays) |> as.data.frame()
+    dets     <- get_detections(sim, detections) |> as.data.frame()
+    moorings <- get_array(sim, arrays) |> as.data.frame()
 
     #### Prepare actel dataserts
     # Biometrics
     act_bio <-
-      data.frame(Release.date = acoustics$timestamp[1] - 1,
+      data.frame(Release.date = dets$timestamp[1] - 1,
                  Release.site = "unspecified",
                  Group = 1,
                  Signal = 1L)
@@ -85,7 +85,7 @@ actel <-
     # Spatial datasets
     moorings_ll <-
       moorings |>
-      select(receiver_easting, receiver_northing) |>
+      select(receiver_x, receiver_y) |>
       as.matrix() |>
       terra::vect(crs = terra::crs(spat)) |>
       terra::project("EPSG: 4326") |>
@@ -96,7 +96,7 @@ actel <-
       moorings |>
       mutate(
         Longitude = lon, Latitude = lat,
-        x = receiver_easting, y = receiver_northing,
+        x = receiver_x, y = receiver_y,
         Array = "A0", Section = "unspecified",
         Type = "Hydrophone", Range = sim$gamma) |>
       select(Station.name = receiver_id,
@@ -104,8 +104,8 @@ actel <-
              Array, Section, Type, Range)
     # Detections
     act_detections <-
-      acoustics |>
-      mutate(Receiver = receiver_id,
+      dets |>
+      mutate(Receiver = sensor_id,
              Timestamp = timestamp,
              CodeSpace = "unspecified",
              Signal = 1L) |>

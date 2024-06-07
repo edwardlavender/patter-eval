@@ -131,7 +131,7 @@ if (interactive()) {
     p <- read_path(sim)
     prettyGraphics::add_sp_path(p$x, p$y, length = 0, lwd = 0.1)
     m <- read_array(sim)
-    points(m$receiver_easting, m$receiver_northing)
+    points(m$receiver_x, m$receiver_y)
   }
 
   sim <- sims[3, ]

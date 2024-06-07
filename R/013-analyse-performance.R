@@ -170,7 +170,7 @@ if (FALSE) {
       # Plot UD (scaled)
       # terra::plot(ud)
       # Add receivers
-      points(m$receiver_easting, m$receiver_northing,
+      points(m$receiver_x, m$receiver_y,
              pch = 21,
              bg = scales::alpha("black", 0.75),
              col = scales::alpha("black", 0.75),
@@ -178,7 +178,7 @@ if (FALSE) {
       # Add detection range(s)
       # * We use a scale bar instead
       if (FALSE) {
-        cbind(m$receiver_easting, m$receiver_northing) |>
+        cbind(m$receiver_x, m$receiver_y) |>
           terra::vect() |>
           terra::buffer(width = sim$gamma) |>
           terra::lines(lwd = 0.5, col = "dimgrey")

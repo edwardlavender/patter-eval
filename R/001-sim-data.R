@@ -285,22 +285,22 @@ saveRDS(paths, here_input("paths.rds"))
 
 #########################
 #########################
-#### Simulate detections
+#### Simulate acoustic observations (0, 1)
 
 #### Overview
-# For each array/path realisation, we simulate detections
+# For each array/path realisation, we simulate acoustic observations
 # This code returns a list:
 # * One element for each set of detection pars & path type
 #   * One element for each array design
-#       * One data.table with detections for all array/path realisations
+#       * One data.table with acoustic observations for all array/path realisations
 
-#### Simulate detections (~15 mins)
+#### Simulate acoustic observations (~15 mins)
 # (This is very slow for backward compatibility/historical reasons)
 pairs <- CJ(a = seq_len(n_array_realisations),
             p = seq_len(n_path_realisations))
 pairs$key <- paste(pairs$a, pairs$p)
 tic()
-detections <-
+acoustics <-
   pbapply::pblapply(seq_len(n_systems), function(i) {
 
     # Define detection probability parameters
@@ -386,14 +386,15 @@ toc()
 # We exclude simulations without sufficient observations
 # (see below).
 
-#### Save detections (0, 1)
-#
-#
-# TO DO
-# Review if this should be (0, 1) or just (1) for different code components
-#
-#
-saveRDS(detections, here_input("detections.rds"))
+#### Save acoustic observations (0, 1) and detections (0, 1)
+# Save acoustics
+qs::qsave(acoustics, here_input("acoustics.qs"))
+# Save detections
+detections <- lapply(acoustics, function(elm) {
+  lapply(elm, function(d) {
+    d[obs == 1L, ]
+  })
+})
 qs::qsave(detections, here_input("detections.qs"))
 
 

@@ -216,7 +216,7 @@ dlist    <- read_dlist(sim)
 #### Plot area & path
 terra::plot(spat)
 add_sp_path(path$x, path$y, length = 0.01)
-text(moorings$receiver_easting, moorings$receiver_northing, moorings$receiver_id, col = "red", font = 2)
+text(moorings$receiver_x, moorings$receiver_y, moorings$receiver_id, col = "red", font = 2)
 
 #### Plot acoustic and archival observations
 acc
@@ -280,7 +280,7 @@ pf_plot_history(.dlist = dlist,
                   # Plot true path
                   add_sp_path(path$x, path$y, length = 0.01, lwd = 0.75, col = scales::alpha("dimgrey", 0.75))
                   # Add moorings
-                  points(moorings$receiver_easting, moorings$receiver_northing,
+                  points(moorings$receiver_x, moorings$receiver_y,
                          col = "blue", lwd = 2)
                   # Plot true position at time t
                   points(path$x[t], path$y[t], col = "orange", lwd = 3)
