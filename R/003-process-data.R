@@ -76,6 +76,12 @@ gammas <-
 #########################
 #### Prep datasets
 
+#
+# TO DO
+# REVIEW THIS CODE WITH RESPECT TO WHAT WE NEED
+#
+#
+
 #### Arrays (~5 s)
 # Define relevant simulation information
 # * /array_type/array_realisation/
@@ -129,30 +135,6 @@ pbapply::pblapply(sims_for_realisations_ls, function(sim) {
   acoustics <- qs::qread(file.path(folder("acoustics"), "acoustics.qs"))
   out <- get_path(sim, paths, acoustics)
   qs::qsave(out, file.path(folder("paths"), "path.qs"))
-  TRUE
-}) |> invisible()
-
-#### Data lists (~50 * 2 s)
-# * /combination {system type, path type}/array_type/array_realisation/path_realisation/gamma
-pbapply::pblapply(sims_for_realisations_ls, function(sim) {
-  # sim <- sims_for_realisations_ls[[1]]
-  folder <- here_input("dlist",
-                       sim$combination,
-                       sim$array_type, sim$array_realisation,
-                       sim$path_realisation,
-                       sim$gamma)
-  dir.create(folder, recursive = TRUE)
-  acc      <- get_acoustics(sim, detections)
-  arc      <- get_path(sim, paths, acc)
-  moorings <- get_array(sim, arrays)
-  moorings$receiver_range <- sim$gamma
-  out <- pat_setup_data(.acoustics = acc,
-                        .archival = arc,
-                        .moorings = moorings,
-                        .bathy = spat,
-                        .lonlat = FALSE)
-  out$spatial$bathy <- NULL
-  qs::qsave(out, file.path(folder, "dlist.qs"))
   TRUE
 }) |> invisible()
 

@@ -21,8 +21,11 @@ dv::clear()
 #### Essential packages
 library(dv)
 library(prettyGraphics)
+dv::src()
 
 #### Load data
+spat <- terra::rast(here_input("spat.tif"))
+arrays <- readRDS(here_input("arrays.rds"))
 detection_pars <- readRDS(here_input("detection_pars.rds"))
 path_pars      <- readRDS(here_input("path_pars.rds"))
 

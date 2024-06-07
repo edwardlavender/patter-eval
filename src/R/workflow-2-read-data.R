@@ -23,28 +23,6 @@ read_path <- function(sim) {
     qs::qread()
 }
 
-read_dlist <- function(sim) {
-  here_input("dlist",
-             sim$combination,
-             sim$array_type, sim$array_realisation,
-             sim$path_realisation,
-             sim$gamma,
-             "dlist.qs") |>
-    qs::qread()
-}
-
-read_overlaps <- function(sim) {
-  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma, "overlaps.qs") |>
-    qs::qread()
-}
-
-read_kernels <- function(sim) {
-  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma,
-             sim$alpha, sim$beta, "kernels.qs") |>
-    qs::qread() |>
-    unwrapr()
-}
-
 read_actel <- function(sim) {
   here_input("actel",
              sim$combination,

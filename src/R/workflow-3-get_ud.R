@@ -1,23 +1,20 @@
 #' @title UD functions
 
-get_ud_path <- function(sim,
-                        spat, path,
-                        im, win,
-                        sigma = spatstat.explore::bw.diggle,
+get_ud_path <- function(sim, path,
+                        spat, win, sigma = spatstat.explore::bw.diggle,
                         overwrite = TRUE) {
   out_file <- here_alg(sim, "path", "ud.tif")
   if (overwrite | !file.exists(out_file)) {
-    # Use .discretise = TRUE for consistency
-    # (The path is already defined on the grid)
     ud_path <-
-      map_dens(.map = spat,
-               .im = im,
-               .win = win,
-               .coord = path[, .(x, y)],
-               .discretise = TRUE,
-               .plot = FALSE,
-               .verbose = FALSE,
-               sigma = sigma)
+      map_dens(
+        .map,
+        .owin = win,
+        .coord = path[, .(x, y)],
+        .discretise = TRUE,
+        .plot = FALSE,
+        .verbose = FALSE,
+        sigma = sigma
+      )
     write_rast(ud_path, out_file)
   } else {
     ud_path <- terra::rast(out_file)
@@ -26,24 +23,22 @@ get_ud_path <- function(sim,
 }
 
 get_ud_coa <- function(sim,
-                       spat, dlist, delta_t,
-                       im, win,
-                       sigma = spatstat.explore::bw.diggle) {
+                       acoustics, delta_t,
+                       spat, win, sigma = spatstat.explore::bw.diggle) {
   out_file  <- here_alg(sim, "coa", delta_t, "ud.tif")
-  acoustics <- dlist$data$acoustics
   if (secs(max(acoustics$timestamp), min(acoustics$timestamp)) <=
       as.numeric(lubridate::duration(delta_t))) {
     return(FALSE)
   }
-  out_coa <- coa(.dlist = dlist,
+  out_coa <- coa(.map = spat,
+                 .acoustics = acoustics[obs == 1L, ],
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
   # Use .discretise = TRUE for consistency
   ud_coa  <-
     map_dens(.map = spat,
-             .im = im,
-             .win = win,
-             .coord = out_coa[, .(x = coa_x, y = coa_y)],
+             .owin = win,
+             .coord = out_coa[, .(x, y)],
              .discretise = TRUE,
              .plot = FALSE,
              .verbose = FALSE,
@@ -130,9 +125,9 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
 }
 
 get_ud_patter <- function(sim,
-                          obs, dlist, algorithm = c("acpf", "acdcpf"),
-                          spat, im, win,
-                          sigma = spatstat.explore::bw.diggle,
+                          timeline, yobs,
+                          algorithm = c("acpf", "acdcpf"),
+                          spat, win, sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE) {
 
   #### (optional) Prior convergence check
@@ -142,76 +137,63 @@ get_ud_patter <- function(sim,
     return(readRDS(out_file_convergence))
   }
 
-  #### Define simulation arguments
-  # Proposal function
-  # * Stochastic kicks are up to sim$mobility in length
-  # * In directed sampling we account for the discretisation error
-  rargs <- list(.shape = sim$shape, .scale = sim$scale,
-                .mobility = sim$mobility)
-  dargs <- list(.shape = sim$shape, .scale = sim$scale,
-                .mobility = sim$mobility + sr)
-  # Likelihood functions
-  algorithm <- match.arg(algorithm)
-  if (algorithm == "acpf") {
-    lik <-  list(acs_filter_container = acs_filter_container,
-                 pf_lik_ac = pf_lik_ac)
-  } else if (algorithm == "acdcpf") {
-    lik <-  list(pf_lik_dc = pf_lik_dc,
-                 acs_filter_container = acs_filter_container,
-                 pf_lik_ac = pf_lik_ac)
-  }
-  # Record opts
-  record <- pf_opt_record(.save = TRUE)
+  #### Filter args
+  # Observations
+  yobs # TO DO
+  # Models
+  model_obs <- c("ModelObsAcousticLogisTrunc", "ModelObsDepthUniform")
+  model_move <-
+    move_xy(dbn_length =
+              glue("truncated(Gamma({sim$shape},
+                                    {sim$scale}),
+                              upper = {sim$mobility})"),
+            dbn_angle = "Uniform(-pi, pi)")
+  # List
+  args <- list(.map = spat,
+               .timeline = timeline,
+               .state = "StateXY",
+               .yobs = yobs,
+               .model_obs = model_obs,
+               .model_move = model_move,
+               .n_particle = sim$n_particles,
+               .n_resample = sim$n_particles,
+               .verbose = FALSE
+               )
 
-  #### Forward simulation
-  t1_pff  <- Sys.time()
-  ssf()
-  out_pff  <- pf_forward(.obs = obs,
-                         .dlist = dlist,
-                         .rargs = rargs,
-                         .dargs = dargs,
-                         .likelihood = lik,
-                         .n = sim$n_particles,
-                         .trial = pf_opt_trial(.trial_resample_crit = 0L),
-                         .control = pf_opt_control(.sampler_batch_size = 1000L),
-                         .record = record,
-                         .verbose = FALSE)
+  #### Forward filter
+  t1_pff   <- Sys.time()
+  out_pff  <- do.call(pf_filter, args, quote = TRUE)
   t2_pff   <- Sys.time()
   pff_mins <- mins(t2_pff, t1_pff)
-  saveRDS(out_pff$convergence, out_file_convergence)
   if (!out_pff$convergence) {
+    saveRDS(FALSE, out_file_convergence)
     return(FALSE)
   }
 
-  #### Backward killer
-  pfbk_mins  <- NA_real_
-  run_killer <- TRUE
-  if (run_killer) {
-    t1_pfbk   <- Sys.time()
-    out_pfbk  <- pf_backward_killer(.history = out_pff$history,
-                                    .record = record,
-                                    .verbose = FALSE)
-    t2_pfbk   <- Sys.time()
-    pfbk_mins <- mins(t2_pfbk, t1_pfbk)
+  #### Backward filter
+  t1_pfb  <- Sys.time()
+  args$direction <- "backward"
+  out_pfb  <- do.call(pf_filter, args, quote = TRUE)
+  t2_pfb   <- Sys.time()
+  pfb_mins <- mins(t2_pfb, t1_pfb)
+  if (!out_pfb$convergence) {
+    saveRDS(FALSE, out_file_convergence)
+    return(FALSE)
   }
 
-  #### Backward sampler
+  #### Backward smoother
+  # Record successful convergence
+  saveRDS(TRUE, out_file_convergence)
+  # Implement sampler
   pfbs_mins   <- NA_real_
   run_sampler <- TRUE
   if (run_sampler) {
     t1_pfbs  <- Sys.time()
-    ssf()
-    # For pf_backward_sampler_p():
-    # * dlist$algorithm$sim <- sim
-    # * .dpropose = pf_dpropose_read
-    # * .dargs = list()
-    out_pfbs <- pf_backward_sampler_v(.history = out_pff$history,
-                                      .dpropose = pf_dpropose,
-                                      .obs = obs,
-                                      .dlist = dlist,
-                                      .dargs = dargs,
-                                      .record = record,
-                                      .verbose = FALSE)
+    # (optional) TO DO
+    # * Improve speed by pre-defining box in Julia
+    out_smo <- pf_smoother_two_filter(.map = spat,
+                                      .mobility = sim$mobility,
+                                      .n_particle = 1000L)
     t2_pfbs  <- Sys.time()
     pfbs_mins <- mins(t2_pfbs, t1_pfbs)
   }
@@ -219,36 +201,26 @@ get_ud_patter <- function(sim,
   #### Map arguments
   # Use .discretise = TRUE for speed
   map_args <- list(.map = spat,
-                   .im = im,
-                   .win = win,
+                   .owin = win,
+                   .coord = out_pff$states,
                    .discretise = TRUE,
                    .plot = FALSE,
                    .verbose = FALSE,
                    sigma = sigma)
 
   #### Mapping (forward run)
-  map_args$.coord <- pf_coord(.history = out_pff$history, .bathy = spat)
   t1_udf          <- Sys.time()
   udf             <- do.call(map_dens, map_args)
   t2_udf          <- Sys.time()
   udf_mins        <- mins(t2_udf, t1_udf)
 
-  #### Mapping (backward killer)
-  udk_mins          <- NA_real_
-  if (run_killer) {
-    map_args$.coord <- NULL
-    map_args$.coord <- pf_coord(.history = out_pfbk$history, .bathy = spat)
-    t1_udk          <- Sys.time()
-    udk             <- do.call(map_dens, map_args)
-    t2_udk          <- Sys.time()
-    udk_mins        <- mins(t2_udk, t1_udk)
-  }
+  #### Mapping (backward run)
+  # (For speed, this is not currently implemented)
 
   #### Mapping (backward sampler)
   uds_mins          <- NA_real_
   if (run_sampler) {
-    map_args$.coord <- NULL
-    map_args$.coord <- pf_coord(.history = out_pfbs$history, .bathy = spat)
+    map_args$.coord <- out_smo$states
     t1_uds          <- Sys.time()
     uds             <- do.call(map_dens, map_args)
     t2_uds          <- Sys.time()
@@ -259,20 +231,15 @@ get_ud_patter <- function(sim,
   # Timings
   time <- data.table(id = sim$id,
                      pff = pff_mins,
-                     pfbk = pfbk_mins,
                      pfbs = pfbs_mins,
                      udf = udf_mins,
-                     udk = udk_mins,
                      uds = uds_mins)
 
   qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
   # Particle samples (for checks)
-  # qs::qsave(out_pfbk, here_alg(sim, "patter", algorithm, sim$alg_par, "particles-k.qs"))
+  # qs::qsave(out_pff$states, here_alg(sim, "patter", algorithm, sim$alg_par, "particles.qs"))
   # UD
   write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
-  if (run_killer) {
-    write_rast(udk, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-k.tif"))
-  }
   if (run_sampler) {
     write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
   }

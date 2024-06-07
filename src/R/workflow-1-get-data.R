@@ -10,6 +10,8 @@ get_acoustics <- function(sim, detections) {
   detections[[sim$combination]][[sim$array_type]] |>
     filter(array_id == sim$array_realisation) |>
     filter(path_id == sim$path_realisation) |>
+    # Focus on detections only
+    filter(obs == 1L) |>
     as.data.table()
 }
 
