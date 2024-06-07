@@ -85,17 +85,16 @@ control <- pf_opt_control(.sampler_batch_size = 1000L)
 #### Forward simulation
 tic()
 ssf()
-out_pff  <- pf_forward(.obs = obs,
-                       .dlist = dlist,
-                       .rargs = rargs,
-                       .dargs = dargs,
-                       .likelihood = lik,
-                       .n = sim$n_particles,
-                       .trial = pf_opt_trial(.trial_resample_crit = 0L),
-                       .control = control,
-                       .record = record,
-                       .verbose = FALSE)
-toc()
+  out_pff  <- pf_forward(.obs = obs,
+                         .dlist = dlist,
+                         .rargs = rargs,
+                         .dargs = dargs,
+                         .likelihood = lik,
+                         .n = sim$n_particles,
+                         .trial = pf_opt_trial(.trial_resample_crit = Inf),
+                         .control = control,
+                         .record = record,
+                         .verbose = TRUE)
 
 toc()
 
@@ -118,6 +117,18 @@ if (TRUE) {
                           .verbose = FALSE)
   t0_end <- Sys.time()
   difftime(t0_end, t0_start)
+
+  # Check diagnostics]
+  library(prettyGraphics)
+  (diag <- pf_diag_summary(out_0$history))
+  p <- 1:250
+  pretty_plot(diag$timestep[p], diag$nu[p],
+              ylim = c(0, NA), type = "b", cex = 0.5)
+  pretty_plot(diag$timestep[p], diag$ess[p],
+              ylim = c(0, NA), type = "b", cex = 0.5,
+              xlab = "Time (step)", ylab = "ESS")
+  abline(v = obs$timestep[obs$detection == 1L], col = "red", lty = 3)
+
 }
 
 #### pf_backward_sampler_p():
@@ -134,6 +145,7 @@ if (TRUE) {
                                  .verbose = FALSE)
   t1_end <- Sys.time()
   difftime(t1_end, t1_start)
+
 }
 
 #### pf_backward_sampler_p_fst() with .read = TRUE:
