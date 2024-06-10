@@ -7,14 +7,14 @@ get_ud_path <- function(sim, path,
   if (overwrite | !file.exists(out_file)) {
     ud_path <-
       map_dens(
-        .map,
+        .map = spat,
         .owin = win,
         .coord = path[, .(x, y)],
         .discretise = TRUE,
         .plot = FALSE,
         .verbose = FALSE,
         sigma = sigma
-      )
+      )$ud
     write_rast(ud_path, out_file)
   } else {
     ud_path <- terra::rast(out_file)
@@ -23,15 +23,15 @@ get_ud_path <- function(sim, path,
 }
 
 get_ud_coa <- function(sim,
-                       acoustics, delta_t,
+                       detections, delta_t,
                        spat, win, sigma = spatstat.explore::bw.diggle) {
   out_file  <- here_alg(sim, "coa", delta_t, "ud.tif")
-  if (secs(max(acoustics$timestamp), min(acoustics$timestamp)) <=
+  if (secs(max(detections$timestamp), min(detections$timestamp)) <=
       as.numeric(lubridate::duration(delta_t))) {
     return(FALSE)
   }
   out_coa <- coa(.map = spat,
-                 .acoustics = acoustics[obs == 1L, ],
+                 .acoustics = detections[obs == 1L, ],
                  .delta_t = delta_t,
                  .plot_weights = FALSE)
   # Use .discretise = TRUE for consistency
@@ -42,7 +42,7 @@ get_ud_coa <- function(sim,
              .discretise = TRUE,
              .plot = FALSE,
              .verbose = FALSE,
-             sigma = sigma)
+             sigma = sigma)$ud
   write_rast(ud_coa, out_file)
   TRUE
 }
@@ -210,7 +210,7 @@ get_ud_patter <- function(sim,
 
   #### Mapping (forward run)
   t1_udf          <- Sys.time()
-  udf             <- do.call(map_dens, map_args)
+  udf             <- do.call(map_dens, map_args)$ud
   t2_udf          <- Sys.time()
   udf_mins        <- mins(t2_udf, t1_udf)
 
@@ -222,7 +222,7 @@ get_ud_patter <- function(sim,
   if (run_sampler) {
     map_args$.coord <- out_smo$states
     t1_uds          <- Sys.time()
-    uds             <- do.call(map_dens, map_args)
+    uds             <- do.call(map_dens, map_args)$ud
     t2_uds          <- Sys.time()
     uds_mins        <- mins(t2_uds, t1_uds)
   }

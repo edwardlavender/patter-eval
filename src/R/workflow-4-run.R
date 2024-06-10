@@ -1,13 +1,12 @@
 #' @title Workflows
 
-# TO DO
-# To revise in line with _ud() function updates!
-
 workflow_path <- function(sim, spat, win) {
   path    <- read_path(sim)
   stopifnot(nrow(path) != 0L)
-  ud_path <- get_ud_path(sim = sim, spat = spat,
-                         path = path, im = im, win = win)
+  ud_path <- get_ud_path(sim = sim, path = path,
+                         spat = spat, win = win)
+  # terra::plot(ud_path)
+  # points(path$x, path$y, pch = ".")
   if (is.null(ud_path)) {
     stop(paste0("`map_dens()` failed for simulation ID ", sim$id, "."))
   }
@@ -15,13 +14,13 @@ workflow_path <- function(sim, spat, win) {
 }
 
 workflow_coa <- function(sim, spat, win) {
-  dlist <- read_dlist(sim)
-  s1 <- get_ud_coa(sim = sim, spat = spat,
-                   dlist = dlist, delta_t = "30 mins",
-                   im = im, win = win)
-  s2 <- get_ud_coa(sim = sim, spat = spat,
-                   dlist = dlist, delta_t = "120 mins",
-                   im = im, win = win)
+  detections <- read_detections(sim)
+  s1 <- get_ud_coa(sim = sim,
+                   detections = detections, delta_t = "30 mins",
+                   spat = spat, win = win)
+  s2 <- get_ud_coa(sim = sim,
+                   detections = detections, delta_t = "120 mins",
+                   spat = spat, win = win)
   data.frame(row = sim$row, coa_1 = s1, coa_2 = s2)
 }
 

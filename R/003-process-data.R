@@ -78,13 +78,6 @@ gammas <-
 #########################
 #### Prepare datasets
 
-#
-#
-# TO DO
-# REVIEW THIS CODE WITH RESPECT TO WHAT WE NEED
-#
-#
-
 #### Arrays (~5 s)
 # Define relevant simulation information
 # * /array_type/array_realisation/
@@ -123,7 +116,7 @@ pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
                        sim$path_realisation)
   dir.create(folder, recursive = TRUE)
   acc <- get_acoustics(sim, acoustics)
-  det <- get_detections(sim, detections)
+  det <- acc[obs == 1L, ]
   qs::qsave(acc, file.path(folder, "acoustics.qs"))
   qs::qsave(det, file.path(folder, "detections.qs"))
   TRUE

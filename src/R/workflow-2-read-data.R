@@ -14,6 +14,24 @@ read_acoustics <- function(sim) {
     qs::qread()
 }
 
+read_detections <- function(sim) {
+  here_input("acoustics",
+             sim$combination,
+             sim$array_type, sim$array_realisation,
+             sim$path_realisation,
+             "detections.qs") |>
+    qs::qread()
+}
+
+read_archival <- function(sim) {
+  here_input("acoustics",
+             sim$combination,
+             sim$array_type, sim$array_realisation,
+             sim$path_realisation,
+             "archival.qs") |>
+    qs::qread()
+}
+
 read_path <- function(sim) {
   here_input("paths",
              sim$combination,

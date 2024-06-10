@@ -80,8 +80,8 @@ terra::writeRaster(spat, here_input("blank.tif"), overwrite = TRUE)
 g       <- terra::as.data.frame(spat, xy = TRUE)
 g$depth <- gen_depth(g)
 spat    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
-                           spat,
-                           values = g$depth)
+                            spat,
+                            values = g$depth)
 names(spat) <- "bathy"
 terra::global(terra::cellSize(spat, unit = "km"), "sum")
 # Export map
@@ -159,7 +159,8 @@ array_pars <-
   as.data.table()
 
 #### Simulate arrays
-# We simulate n_array designs, as defined by the parameters above (one realisation of each)
+# We simulate a list of n_array designs
+# ... as defined by the parameters above (one realisation of each)
 # We hold array designs constant across different detection probability parameters
 n_array              <- nrow(array_pars)
 n_array_realisations <- 1L
@@ -190,7 +191,7 @@ coverage <-
     pbapply::pblapply(seq_len(length(arrays)), function(i) {
       # Define detection containers
       containers <- terra::setValues(spat, NA)
-      array    <- arrays[[i]]
+      array      <- arrays[[i]]
       array[, cell_id := terra::cellFromXY(containers, cbind(receiver_x, receiver_y))]
       containers[array$cell_id] <- 1
       containers <- terra::buffer(containers, d$gamma)
@@ -265,8 +266,10 @@ origin <- data.table(map_value = terra::extract(spat, origin)[1, 1],
 tic()
 paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
   # Define movement model
-  model_move <- move_xy(dbn_length = glue("truncated(Gamma({d$shape}, {d$scale}), upper = {d$mobility})"),
-                        dbn_angle = "Uniform(-pi, pi)")
+  model_move <-
+    move_xy(dbn_length = glue("truncated(Gamma({d$shape}, {d$scale}),
+                                         upper = {d$mobility})"),
+            dbn_angle = "Uniform(-pi, pi)")
   # Generate paths
   sim_path_walk(.map = spat,
                 .timeline = period,
@@ -297,10 +300,10 @@ saveRDS(paths, here_input("paths.rds"))
 
 #### Simulate acoustic observations (~15 mins)
 # (This is very slow for backward compatibility/historical reasons)
+tic()
 pairs <- CJ(a = seq_len(n_array_realisations),
             p = seq_len(n_path_realisations))
 pairs$key <- paste(pairs$a, pairs$p)
-tic()
 acoustics <-
   pbapply::pblapply(seq_len(n_systems), function(i) {
 
@@ -325,7 +328,7 @@ acoustics <-
     )
 
     # Simulate observations for each array
-    lapply(seq_len(n_array), function(j) {
+    pbapply::pblapply(seq_len(n_array), function(j) {
 
       print(glue("{i} / {n_systems}; {j} / {n_array}"))
 
@@ -343,7 +346,7 @@ acoustics <-
       # > This returns a list with two elements:
       # * ModelObsDepthUniform (used for checking only)
       # * ModelObsAcousticLogisTrunc element
-      # > That itself is a list, with one element for path realisation
+      # > That itself is a list, with one element for each path realisation
       sim <- sim_observations(.timeline = period,
                               .model_obs = c("ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"),
                               .model_obs_pars = list(array,
@@ -360,19 +363,17 @@ acoustics <-
       check <- rbindlist(check)
       stopifnot(all.equal(paths[[i]]$map_value, check$obs))
 
-      # Collate simulated observations
-      # > We want one data.table with detections for all array/path realisations
+      # Collate simulated acoustic observations (0, 1)
+      # > We want one data.table with observations for all array/path realisations
       sim <- sim$ModelObsAcousticLogisTrunc
       for (k in seq_len(length(sim))) {
         sim[[k]][, array_id := arrays[[j]]$array_id[1]]
         sim[[k]][, path_id := k]
       }
       sim <- rbindlist(sim)
-      # Focus on detections
-      sim <- sim[obs > 0L, ]
       # Check for simulations without detections
       sim$key <- paste(sim$array_id, sim$path_id)
-      if (!all(pairs$key %in% sim$key)) {
+      if (!all(pairs$key %in% sim$key[sim$obs > 0L])) {
         print(pairs[!(pairs$key %in% sim$key), ])
         warning("Some keys did not generate detections.",
                 call. = FALSE, immediate. = TRUE)
@@ -389,6 +390,7 @@ toc()
 
 #### Save acoustic observations (0, 1) and detections (0, 1)
 # Save acoustics
+head(acoustics[[1]][[1]])
 qs::qsave(acoustics, here_input("acoustics.qs"))
 # Save detections
 detections <- lapply(acoustics, function(elm) {
@@ -396,6 +398,7 @@ detections <- lapply(acoustics, function(elm) {
     d[obs == 1L, ]
   })
 })
+head(detections[[1]][[1]])
 qs::qsave(detections, here_input("detections.qs"))
 
 
@@ -454,7 +457,7 @@ alg_pars <-
             vals <- c(2, 4, 8)
           }
           if (x == "n_particles") {
-            vals <- c(1000, 5000, 10000)
+            vals <- c(5000, 10000, 20000)
           }
           dp <- data.table(x = vals)
           colnames(dp) <- x
@@ -469,9 +472,9 @@ alg_pars <-
           # For step, we need to update the 'correct' step length parameters
           # (to account for the longer duration)
           if (x == "step") {
-            for (v in vals) {
-              dp$mobility[i] <- dp$mobility[i] * (dp$step[i] / alg_controls$step)
-              dp$shape[i]    <- dp$shape[i] * (dp$step[i] / alg_controls$step)
+            for (v in seq_len(length(vals))) {
+              dp$mobility[v] <- dp$mobility[v] * (dp$step[v] / alg_controls$step)
+              dp$shape[v]    <- dp$shape[v] * (dp$step[v] / alg_controls$step)
             }
           }
 
@@ -621,7 +624,7 @@ for (i in seq_len(n)) {
   svMisc::progress(i, n)
   sims$count[i] <-
     detections[[sims$system_type[i]]][[sims$array_type[i]]][
-    array_id == sims$array_realisation[i] & path_id == sims$path_realisation[i] & obs == 0L, ] |>
+    array_id == sims$array_realisation[i] & path_id == sims$path_realisation[i] & obs == 1L, ] |>
     fnrow()
 }
 toc()
