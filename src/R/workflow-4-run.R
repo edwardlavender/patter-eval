@@ -38,19 +38,39 @@ workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
 
 workflow_patter <- function(sim, spat, win) {
 
-  # Define observations
-  # TO DO
-  # dlist <- read_dlist(sim)
+  # Read data
+  acoustics <- read_acoustics(sim)
+  archival  <- read_archival(sim)
+
+  # Algorithm components
+  t1         <- min(acoustics$timestamp)
+  tT         <- max(acoustics$timestamp)
+  timeline   <- seq(t1, tT, by = "2 mins")
+  model_move <-
+    move_xy(dbn_length =
+              glue::glue("truncated(Gamma({sim$shape},
+                                    {sim$scale}),
+                              upper = {sim$mobility})"),
+            dbn_angle = "Uniform(-pi, pi)")
 
   # ACPF algorithm
   success_acpf <- get_ud_patter(sim = sim,
-                                obs = obs, dlist = dlist, algorithm = "acpf",
-                                spat = spat, im = im, win = win)
+                                timeline = timeline,
+                                yobs = list(acoustics),
+                                model_obs = "ModelObsAcousticLogisTrunc",
+                                model_move = model_move,
+                                algorithm = "acpf",
+                                spat = spat, win = win)
 
   # ACDCPF algorithm
   success_acdcpf <- get_ud_patter(sim = sim,
-                                  obs = obs, dlist = dlist, algorithm = "acdcpf",
-                                  spat = spat, im = im, win = win)
+                                  timeline = timeline,
+                                  yobs = list(acoustics, archival),
+                                  model_obs = c("ModelObsAcousticLogisTrunc",
+                                                "ModelObsDepthUniform"),
+                                  model_move = model_move,
+                                  algorithm = "acdcpf",
+                                  spat = spat, win = win)
   # Outputs
   data.table(row = sim$row, acpf = success_acpf, acdcpf = success_acdcpf)
 }

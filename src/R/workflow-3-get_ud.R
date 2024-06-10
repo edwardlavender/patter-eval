@@ -127,7 +127,7 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
 }
 
 get_ud_patter <- function(sim,
-                          timeline, yobs,
+                          timeline, yobs, model_obs, model_move,
                           algorithm = c("acpf", "acdcpf"),
                           spat, win, sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE) {
@@ -140,20 +140,11 @@ get_ud_patter <- function(sim,
   }
 
   #### Filter args
-  # Observations
-  yobs # TO DO
-  # Models
-  model_obs <- c("ModelObsAcousticLogisTrunc", "ModelObsDepthUniform")
-  model_move <-
-    move_xy(dbn_length =
-              glue("truncated(Gamma({sim$shape},
-                                    {sim$scale}),
-                              upper = {sim$mobility})"),
-            dbn_angle = "Uniform(-pi, pi)")
-  # List
   args <- list(.map = spat,
                .timeline = timeline,
                .state = "StateXY",
+               .xinit = NULL,
+               .xinit_pars = list(mobility = sim$mobility),
                .yobs = yobs,
                .model_obs = model_obs,
                .model_move = model_move,
@@ -174,7 +165,7 @@ get_ud_patter <- function(sim,
 
   #### Backward filter
   t1_pfb  <- Sys.time()
-  args$direction <- "backward"
+  args$.direction <- "backward"
   out_pfb  <- do.call(pf_filter, args, quote = TRUE)
   t2_pfb   <- Sys.time()
   pfb_mins <- mins(t2_pfb, t1_pfb)
@@ -207,7 +198,7 @@ get_ud_patter <- function(sim,
                    .coord = out_pff$states,
                    .discretise = TRUE,
                    .plot = FALSE,
-                   .verbose = FALSE,
+                   .verbose = TRUE,
                    sigma = sigma)
 
   #### Mapping (forward run)
@@ -219,7 +210,7 @@ get_ud_patter <- function(sim,
   #### Mapping (backward run)
   # (For speed, this is not currently implemented)
 
-  #### Mapping (backward sampler)
+  #### Mapping (smoother)
   uds_mins          <- NA_real_
   if (run_sampler) {
     map_args$.coord <- out_smo$states

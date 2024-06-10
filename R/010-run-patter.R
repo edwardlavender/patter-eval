@@ -30,10 +30,15 @@ dv::src()
 
 #### Load data
 spatw      <- readRDS(here_input("spatw.rds"))
-im         <- qs::qread(here_input("im.qs"))
 win        <- qs::qread(here_input("win.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
+
+#### patter
+setDTthreads(threads = 1L)
+julia_connect(.threads = 1L)
+set_seed()
+set_map(terra::unwrap(spatw))
 
 
 #########################
@@ -46,7 +51,7 @@ sims <- sims_for_performance
 # type <- "sensitivity"
 # sims <- sims_for_sensitivity
 # (optional) Define test data subset
-test <- FALSE
+test <- TRUE
 if (test) {
   sims <- sims_for_performance[1:2L ]
 }
@@ -62,9 +67,16 @@ lapply(seq_len(nchunks), function(i) {
   file.create(here_output("log", "patter", type, paste0("log-", i, ".txt")))
 }) |> invisible()
 
+
 #### Time trials
+# Timings for 1 thread:
+# * Forward filter:    4 s
+# * Backward filter:   4 s
+# * Smoother:         90 s
+# * UD estimation:    60 s (2 * 30 s per algorithm run)
+#                    158 s (* 2 = 316 s for ACPF & ACDCPF)
 # Estimated duration on {cl} CPUs, assuming simulations take {guess} seconds
-guess <- 30 # 30 s
+guess <- 158 # 30 s
 (nrow(sims) * 30)/60/60/cl    # hours
 (nrow(sims) * 30)/60/60/24/cl # days
 
@@ -78,6 +90,7 @@ sdt <-
 
     #### Set up chunk
     # Logs
+    # i <- 1
     log.txt <- here_output("log", "patter", type, paste0("log-", i, ".txt"))
     cat_log <- patter:::cat_init(.verbose = log.txt)
     # rstudioapi::navigateToFile(log.txt)
@@ -97,7 +110,6 @@ sdt <-
         t1 <- Sys.time()
         s <- workflow_patter(sim = sim,
                              spat = spat,
-                             im = im,
                              win = win)
         t2 <- Sys.time()
         cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))

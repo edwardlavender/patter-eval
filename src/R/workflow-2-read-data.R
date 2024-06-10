@@ -24,7 +24,7 @@ read_detections <- function(sim) {
 }
 
 read_archival <- function(sim) {
-  here_input("acoustics",
+  here_input("archival",
              sim$combination,
              sim$array_type, sim$array_realisation,
              sim$path_realisation,
