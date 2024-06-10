@@ -27,6 +27,8 @@ workflow_coa <- function(sim, spat, win) {
 }
 
 workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
+  # spat = terra::unwrap(spatw)
+  # spat_ll_dbb = terra::unwrap(spat_ll_dbbw)
   s1 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
                    type = "default")
   s2 <- get_ud_rsp(sim = sim, spat = spat, spat_ll_dbb = spat_ll_dbb, tm = tm,
