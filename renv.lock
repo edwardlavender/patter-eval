@@ -349,28 +349,6 @@
       ],
       "Hash": "74a64813f17b492da9c6afda6b128e3d"
     },
-    "arrow": {
-      "Package": "arrow",
-      "Version": "16.1.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "R6",
-        "assertthat",
-        "bit64",
-        "cpp11",
-        "glue",
-        "methods",
-        "purrr",
-        "rlang",
-        "stats",
-        "tidyselect",
-        "utils",
-        "vctrs"
-      ],
-      "Hash": "d9cb18a8fc53895548150650cadde3a6"
-    },
     "askpass": {
       "Package": "askpass",
       "Version": "1.2.0",
@@ -380,16 +358,6 @@
         "sys"
       ],
       "Hash": "cad6cf7f1d5f6e906700b9d3e718c796"
-    },
-    "assertthat": {
-      "Package": "assertthat",
-      "Version": "0.2.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "tools"
-      ],
-      "Hash": "50c838a310445e954bc13f26f26a6ecf"
     },
     "audio": {
       "Package": "audio",
@@ -1568,22 +1536,20 @@
       "RemoteRepo": "patter",
       "RemoteUsername": "edwardlavender",
       "RemoteRef": "HEAD",
-      "RemoteSha": "5d4f93e7489b49abe8f78d968a626e9371204b5f",
+      "RemoteSha": "66fccab6c4ae783473c8eaa1b2518dc652725478",
       "Requirements": [
+        "JuliaCall",
         "R",
-        "arrow",
-        "circular",
         "collapse",
         "data.table",
         "dplyr",
         "dtplyr",
         "glue",
         "lubridate",
-        "pbapply",
         "rlang",
         "terra"
       ],
-      "Hash": "8447c7a5575a65758a01a7641203c322"
+      "Hash": "6a719b3aacb374daeb5ab5b7b67b9d83"
     },
     "pbapply": {
       "Package": "pbapply",
