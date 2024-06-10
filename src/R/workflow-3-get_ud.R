@@ -30,6 +30,8 @@ get_ud_coa <- function(sim,
       as.numeric(lubridate::duration(delta_t))) {
     return(FALSE)
   }
+  stopifnot(delta_t %in% c("30 mins", "120 mins"))
+  delta_t <- ifelse(delta_t == "120 mins", "2 hours", delta_t)
   out_coa <- coa(.map = spat,
                  .acoustics = detections[obs == 1L, ],
                  .delta_t = delta_t,

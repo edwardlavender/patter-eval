@@ -1,5 +1,7 @@
 #' @title Workflows
 
+# spat <- terra::unwrap(spatw)
+
 workflow_path <- function(sim, spat, win) {
   path    <- read_path(sim)
   stopifnot(nrow(path) != 0L)
