@@ -27,6 +27,7 @@ library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(tictoc)
 dv::src()
+tic()
 
 #### Load data
 spat       <- terra::rast(here_input("spat.tif"))
@@ -128,6 +129,18 @@ pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
   TRUE
 }) |> invisible()
 
+#### Archival time series
+pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
+  folder <- here_input("archival",
+                       sim$combination,
+                       sim$array_type, sim$array_realisation,
+                       sim$path_realisation)
+  dir.create(folder, recursive = TRUE)
+  out <- get_archival(sim, paths, detections)
+  qs::qsave(out, file.path(folder, "archival.qs"))
+  TRUE
+}) |> invisible()
+
 #### Paths (~11 * 2 s)
 # * /combination {system type, path type}/array_type/array_realisation/path_realisation
 pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
@@ -138,16 +151,10 @@ pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
                sim$path_realisation)
   }
   dir.create(folder("paths"), recursive = TRUE)
-  det <- get_detections(sim, detections)
-  out <- get_path(sim, paths, det)
+  out <- get_path(sim, paths, detections)
   qs::qsave(out, file.path(folder("paths"), "path.qs"))
   TRUE
 }) |> invisible()
-
-
-#########################
-#########################
-#### Package objects
 
 #### Actel objects (~41 s)
 # This code has to be run non interactively to avoid prompts.
@@ -155,10 +162,6 @@ tic()
 dir.create(here_data("sims", "input", "actel"))
 system("R CMD BATCH --no-save --no-restore ./R/004-process-data-rsp.R ./data/sims/input/actel/log.txt")
 toc()
-
-#### Patter objects
-# Yobs
-# TO DO
 
 
 #########################
@@ -212,6 +215,8 @@ pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(sim) {
   dir.create(file.path(top, "acdcpf", sim$alg_par), recursive = TRUE)
 }) |> invisible()
 
+
+toc()
 
 #### End of code.
 #########################

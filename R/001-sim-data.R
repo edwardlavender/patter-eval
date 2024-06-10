@@ -30,6 +30,7 @@ library(JuliaCall)
 library(prettyGraphics)
 library(tictoc)
 dv::src()
+tic()
 
 #### patter
 julia_connect()
@@ -640,6 +641,9 @@ length(which(sims$performance)) # 1193
 nrow(sims)                      # 39516
 saveRDS(sims, here_input("sims.rds"))
 
+
+toc()
+# 18 mins
 
 #### End of code.
 #########################
