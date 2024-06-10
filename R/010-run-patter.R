@@ -35,8 +35,8 @@ sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
 #### patter
-setDTthreads(threads = 1L)
-julia_connect(.threads = 1L)
+setDTthreads(threads = 10L)
+julia_connect(.threads = 10L)
 set_seed()
 set_map(terra::unwrap(spatw))
 
@@ -76,9 +76,15 @@ lapply(seq_len(nchunks), function(i) {
 # * UD estimation:    60 s (2 * 30 s per algorithm run)
 #                    158 s (* 2 = 316 s for ACPF & ACDCPF)
 # Estimated duration on {cl} CPUs, assuming simulations take {guess} seconds
+# * Multi-thread R:
 guess <- 158 # 30 s
-(nrow(sims) * 30)/60/60/cl    # hours
-(nrow(sims) * 30)/60/60/24/cl # days
+(nrow(sims) * guess)/60/60/cl    # hours
+(nrow(sims) * guess)/60/60/24/cl # days
+# * Multi-thread Julia
+# > Even in the best case, we have to pay 60 s to estimate the UDs
+guess <- 60 # 30 s
+(nrow(sims) * guess)/60/60/1    # hours
+(nrow(sims) * guess)/60/60/24/1
 
 #### Timing
 # * One system: ~2 hour 12 mins, 10 cl
