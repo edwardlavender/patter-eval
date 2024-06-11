@@ -35,8 +35,8 @@ sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
 #### patter
-setDTthreads(threads = 10L)
-julia_connect(.pkg_config = pkg_config, .threads = 10L)
+setDTthreads(threads = Sys.getenv("JULIA_NUM_THREADS"))
+julia_connect()
 set_seed()
 set_map(terra::unwrap(spatw))
 

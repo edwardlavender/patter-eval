@@ -33,7 +33,7 @@ dv::src()
 tic()
 
 #### patter
-julia_connect(.pkg_config = pkg_config)
+julia_connect()
 set_seed()
 
 
