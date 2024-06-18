@@ -414,7 +414,7 @@ qs::qsave(detections, here_input("detections.qs"))
 # * & sufficient/approximate values for algorithm controls (time step lengths, n particles)
 # To do this, we need to build a dataframe with correct & incorrect (or approx) values
 # * We hold each parameter at the right value & change others
-# * We change some combinations of parameters simultaneously
+# * (FALSE) We change some combinations of parameters simultaneously
 # Specific research questions:
 # (1) What happens when we under/overestimate gamma/mobility?
 # ... I.e., can we confirm the results from Lavender et al. (2023)
@@ -443,22 +443,26 @@ alg_pars <-
       #### Change selected parameters while holding others constant
       # * To minimise the number of simulations,
       # ... we (optionally) select a subset of parameters
+      # * We drop 'step' and 'n_particles' for improved speed
       selected_pars <- c("alpha", "beta", "gamma",
-                         "mobility", "shape", "scale",
-                         "step", "n_particles")
+                         "mobility", "shape", "scale") # "step", "n_particles"
       constants <-
         lapply(selected_pars, function(x) {
           # x <- selected_pars[1]
 
           # Define a sequence of parameter values
           vals <- pars[[x]] * c(0.1, 0.5, 1, 1.5, 2)
+
           # For delta t & n_particles, we use selected hard-coded defaults
-          if (x == "step") {
-            vals <- c(2, 4, 8)
-          }
-          if (x == "n_particles") {
-            vals <- c(5000, 10000, 20000)
-          }
+          # * This code is no longer required
+
+          # if (x == "step") {
+          #   vals <- c(2, 4, 8)
+          # }
+          # if (x == "n_particles") {
+          #   vals <- c(5000, 10000, 20000)
+          # }
+
           dp <- data.table(x = vals)
           colnames(dp) <- x
           keep <- colnames(pars)[!(colnames(pars) %in% x)]
@@ -471,12 +475,14 @@ alg_pars <-
 
           # For step, we need to update the 'correct' step length parameters
           # (to account for the longer duration)
-          if (x == "step") {
-            for (v in seq_len(length(vals))) {
-              dp$mobility[v] <- dp$mobility[v] * (dp$step[v] / alg_controls$step)
-              dp$shape[v]    <- dp$shape[v] * (dp$step[v] / alg_controls$step)
-            }
-          }
+          # * This code is no longer required (see above).
+
+          # if (x == "step") {
+          #   for (v in seq_len(length(vals))) {
+          #     dp$mobility[v] <- dp$mobility[v] * (dp$step[v] / alg_controls$step)
+          #     dp$shape[v]    <- dp$shape[v] * (dp$step[v] / alg_controls$step)
+          #   }
+          # }
 
           # Return dp
           dp
@@ -486,23 +492,28 @@ alg_pars <-
 
       #### Change gamma and mobility simultaneously
       # (while holding other parameters constant)
-      gm <- CJ(gamma = unique(constants$gamma),
-               mobility = unique(constants$mobility))
-      keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
-      gm <- cbind(gm, pars[, ..keep])
-      gm$flag <- "gm"
+      # * For speed, this code is no longer implemented.
+
+      # gm <- CJ(gamma = unique(constants$gamma),
+      #          mobility = unique(constants$mobility))
+      # keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
+      # gm <- cbind(gm, pars[, ..keep])
+      # gm$flag <- "gm"
 
       #### Change beta and shape simultaneously
       # (while holding other parameters constant)
-      bs <- CJ(beta = unique(constants$beta),
-                        shape = unique(constants$shape))
-      keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
-      bs <- cbind(bs, pars[, ..keep])
-      bs$flag  <- "bs"
+      # * For speed, this code is no longer implemented.
+
+      # bs <- CJ(beta = unique(constants$beta),
+      #                   shape = unique(constants$shape))
+      # keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
+      # bs <- cbind(bs, pars[, ..keep])
+      # bs$flag  <- "bs"
 
       #### Define all unique parameter sets
       sets <-
-        rbind(pars, constants, gm, bs) |>
+        rbind(pars, constants) |>
+        # rbind(pars, constants, gm, bs) |>
         distinct() |>
         mutate(alg_par = row_number(),
                system_type = i,
@@ -556,6 +567,8 @@ nrow(sims)
 alg_pars_dt <-
   alg_pars |>
   rbindlist() |>
+  # We now use hard-coded defaults for step and n_particles
+  mutate(step = 2, n_particles = 1e4L) |>
   select(system_type, path_type, alg_par,
          alpha, beta, gamma,
          mobility, shape, scale,
@@ -604,16 +617,18 @@ stopifnot(length(which(sims$performance)) ==
 # * Select 10 array designs for this analysis
 # * This helps to minimise the number of simulations
 # * (And we can't plot more results easily anyway)
-nr <- sort(unique(array_pars$number))
-nr <- nr[seq(1, length(nr), by = 10)]
-pos <- which(!sims$performance & sims$flag == "gm" & !(sims$n_receiver %in% nr))
-if (length(pos) > 0) {
-  sims <- sims[-pos, ]
-}
-pos <- which(!sims$performance & sims$flag == "bs" & !(sims$n_receiver %in% nr))
-if (length(pos) > 0) {
-  sims <- sims[-pos, ]
-}
+# * This code is no longer required (see above).
+
+# nr <- sort(unique(array_pars$number))
+# nr <- nr[seq(1, length(nr), by = 10)]
+# pos <- which(!sims$performance & sims$flag == "gm" & !(sims$n_receiver %in% nr))
+# if (length(pos) > 0) {
+#   sims <- sims[-pos, ]
+# }
+# pos <- which(!sims$performance & sims$flag == "bs" & !(sims$n_receiver %in% nr))
+# if (length(pos) > 0) {
+#   sims <- sims[-pos, ]
+# }
 
 #### Exclude simulations with insufficient detections (~37 s)
 # Count the number of detections for each simulation
@@ -630,8 +645,8 @@ for (i in seq_len(n)) {
 toc()
 hist(sims$count, breaks = 100)
 # Drop simulations with insufficient detections
-n; nrow(sims[sims$count > 5L, ])
-sims <- sims[sims$count > 5L, ]
+n; nrow(sims[sims$count > 10L, ])
+sims <- sims[sims$count > 10L, ]
 range(sims$count)
 
 #### Define IDs
@@ -640,8 +655,8 @@ head(sims)
 nrow(sims)
 
 #### Save sims
-length(which(sims$performance)) # 1193
-nrow(sims)                      # 39516
+length(which(sims$performance)) # 1181
+nrow(sims)                      # 29525
 saveRDS(sims, here_input("sims.rds"))
 
 
