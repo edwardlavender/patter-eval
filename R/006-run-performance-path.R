@@ -40,7 +40,7 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #########################
 #### Estimate UDs
 
-#### Run workflow (~30 s, 10 cl)
+#### Run workflow (~62 s, 10 cl)
 gc()
 tic()
 cl_lapply(sims_for_performance_ls,
