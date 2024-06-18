@@ -97,6 +97,13 @@ if (multithread == "R") {
 # * bw.diggle(): 12 s (tends to undersmooth, uses cross validation)
 # * bw.scott(): 1 s (tends to undersmooth, uses a rule of thumb)
 
+# File size
+# * We require 23 MB to store particles from one run of the forward filter:
+# * 23.7 MB
+# * Therefore, we require > 2000 GB (2 TB) to store particles from all filter runs!
+# * 2844 GB (23.7 * 2 *  2 * 30000 / 1e3)
+# * 23.7 * 2 (forward, smoothed particles) * 2 (ACPF, ACDCPF) * 30000 simulations
+
 if (FALSE && multithread == "Julia") {
 
   #### Define simulation
@@ -133,7 +140,12 @@ if (FALSE && multithread == "Julia") {
                .verbose = FALSE)
 
   #### Forward filter
+  # Run filter
   out_pff  <- do.call(pf_filter, args, quote = TRUE)
+  # Check file size
+  tmp      <- tempfile(fileext = ".qs")
+  qs::qsave(out_pff$states, tmp)
+  file.size(tmp) / 1e6
 
   #### Backward filter
   args$.direction <- "backward"

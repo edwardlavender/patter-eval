@@ -139,9 +139,12 @@ get_ud_patter <- function(sim,
   # * Then we can easily re-run get_ud_patter_1()
   # * ... with the same particles
   # * ... but different estimation (e.g., sigma) parameters, if needed
-  # * This option may also be faster
+  # * This option may also be faster:
   # - multi-thread algorithm runs in Julia
   # - multi-thread UD estimation in R
+  # - through writing to disk also has a (high) speed penalty
+  # * But requires much more storage space (see run-patter.R)
+  # * Currently, we do not save particle samples to minimise storage costs
 
   #### (optional) Prior run checks
   # Return FALSE, if previous convergence failure
@@ -166,12 +169,12 @@ get_ud_patter <- function(sim,
                )
 
   #### Forward filter
-  out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
+  # out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
   t1_pff       <- Sys.time()
   out_pff      <- do.call(pf_filter, args, quote = TRUE)
   t2_pff       <- Sys.time()
   pff_mins     <- mins(t2_pff, t1_pff)
-  qs::qsave(out_pff, out_file_pff)
+  # qs::qsave(out_pff, out_file_pff)
   if (!out_pff$convergence) {
     saveRDS(FALSE, out_file_convergence)
     return(FALSE)
@@ -194,14 +197,14 @@ get_ud_patter <- function(sim,
   #### Backward smoother
   # (optional) TO DO
   # * Improve speed by pre-defining box in Julia
-  out_file_smo <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_smo.qs")
+  # out_file_smo <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_smo.qs")
   t1_pfbs      <- Sys.time()
   out_smo      <- pf_smoother_two_filter(.map = spat,
                                          .mobility = sim$mobility,
                                          .n_particle = 1000L)
   t2_pfbs      <- Sys.time()
   pfbs_mins    <- mins(t2_pfbs, t1_pfbs)
-  qs::qsave(out_smo, out_file_smo)
+  # qs::qsave(out_smo, out_file_smo)
 
   #### Map arguments
   # Use .discretise = TRUE for speed
