@@ -132,7 +132,19 @@ get_ud_patter <- function(sim,
                           spat, win, sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE) {
 
-  #### (optional) Prior convergence check
+  #### (optional) TO DO
+  # Split get_ud_patter() into two functions
+  # * get_ud_patter_0() runs the algorithms (and saves particles);
+  # * get_ud_patter_1() estimates the UDs only, reading particles from file
+  # * Then we can easily re-run get_ud_patter_1()
+  # * ... with the same particles
+  # * ... but different estimation (e.g., sigma) parameters, if needed
+  # * This option may also be faster
+  # - multi-thread algorithm runs in Julia
+  # - multi-thread UD estimation in R
+
+  #### (optional) Prior run checks
+  # Return FALSE, if previous convergence failure
   out_file_convergence <-
     here_alg(sim, "patter", algorithm, sim$alg_par, "convergence.rds")
   if (!overwrite && file.exists(out_file_convergence)) {
@@ -154,42 +166,42 @@ get_ud_patter <- function(sim,
                )
 
   #### Forward filter
-  t1_pff   <- Sys.time()
-  out_pff  <- do.call(pf_filter, args, quote = TRUE)
-  t2_pff   <- Sys.time()
-  pff_mins <- mins(t2_pff, t1_pff)
+  out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
+  t1_pff       <- Sys.time()
+  out_pff      <- do.call(pf_filter, args, quote = TRUE)
+  t2_pff       <- Sys.time()
+  pff_mins     <- mins(t2_pff, t1_pff)
+  qs::qsave(out_pff, out_file_pff)
   if (!out_pff$convergence) {
     saveRDS(FALSE, out_file_convergence)
     return(FALSE)
   }
 
   #### Backward filter
-  t1_pfb  <- Sys.time()
+  # out_file_pfb <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pfb.qs")
   args$.direction <- "backward"
-  out_pfb  <- do.call(pf_filter, args, quote = TRUE)
-  t2_pfb   <- Sys.time()
-  pfb_mins <- mins(t2_pfb, t1_pfb)
+  t1_pfb          <- Sys.time()
+  out_pfb         <- do.call(pf_filter, args, quote = TRUE)
+  t2_pfb          <- Sys.time()
+  pfb_mins        <- mins(t2_pfb, t1_pfb)
   if (!out_pfb$convergence) {
     saveRDS(FALSE, out_file_convergence)
     return(FALSE)
   }
+  # qs::qsave(out_pfb, out_file_pfb)
+  saveRDS(TRUE, out_file_convergence)
 
   #### Backward smoother
-  # Record successful convergence
-  saveRDS(TRUE, out_file_convergence)
-  # Implement sampler
-  pfbs_mins   <- NA_real_
-  run_sampler <- TRUE
-  if (run_sampler) {
-    t1_pfbs  <- Sys.time()
-    # (optional) TO DO
-    # * Improve speed by pre-defining box in Julia
-    out_smo <- pf_smoother_two_filter(.map = spat,
-                                      .mobility = sim$mobility,
-                                      .n_particle = 1000L)
-    t2_pfbs  <- Sys.time()
-    pfbs_mins <- mins(t2_pfbs, t1_pfbs)
-  }
+  # (optional) TO DO
+  # * Improve speed by pre-defining box in Julia
+  out_file_smo <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_smo.qs")
+  t1_pfbs      <- Sys.time()
+  out_smo      <- pf_smoother_two_filter(.map = spat,
+                                         .mobility = sim$mobility,
+                                         .n_particle = 1000L)
+  t2_pfbs      <- Sys.time()
+  pfbs_mins    <- mins(t2_pfbs, t1_pfbs)
+  qs::qsave(out_smo, out_file_smo)
 
   #### Map arguments
   # Use .discretise = TRUE for speed
@@ -202,39 +214,40 @@ get_ud_patter <- function(sim,
                    sigma = sigma)
 
   #### Mapping (forward run)
-  t1_udf          <- Sys.time()
-  udf             <- do.call(map_dens, map_args)$ud
-  t2_udf          <- Sys.time()
-  udf_mins        <- mins(t2_udf, t1_udf)
+  t1_udf   <- Sys.time()
+  udf      <- do.call(map_dens, map_args)$ud
+  t2_udf   <- Sys.time()
+  udf_ok   <- !is.null(udf_ok)
+  if (udf_ok) {
+    udf_mins <- mins(t2_udf, t1_udf)
+  } else {
+    udf_mins <- NA_real_
+  }
 
   #### Mapping (backward run)
   # (For speed, this is not currently implemented)
 
   #### Mapping (smoother)
-  uds_mins          <- NA_real_
-  if (run_sampler) {
-    map_args$.coord <- out_smo$states
-    t1_uds          <- Sys.time()
-    uds             <- do.call(map_dens, map_args)$ud
-    t2_uds          <- Sys.time()
-    uds_mins        <- mins(t2_uds, t1_uds)
+  map_args$.coord <- out_smo$states
+  t1_uds          <- Sys.time()
+  uds             <- do.call(map_dens, map_args)$ud
+  t2_uds          <- Sys.time()
+  uds_ok          <- !is.null(udf)
+  if (uds_ok) {
+    uds_mins      <- mins(t2_uds, t1_uds)
+  } else {
+    uds_mins <- NA_real_
   }
 
   #### Outputs
-  # Timings
   time <- data.table(id = sim$id,
                      pff = pff_mins,
                      pfbs = pfbs_mins,
                      udf = udf_mins,
                      uds = uds_mins)
-
   qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
-  # Particle samples (for checks)
-  # qs::qsave(out_pff$states, here_alg(sim, "patter", algorithm, sim$alg_par, "particles.qs"))
-  # UD
   write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
-  if (run_sampler) {
-    write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
-  }
+  write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
   return(TRUE)
+
 }
