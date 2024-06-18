@@ -210,6 +210,7 @@ pbapply::pblapply(split(sims, seq_len(nrow(sims))), function(sim) {
 
 
 toc()
+# 6 mins
 
 #### End of code.
 #########################
