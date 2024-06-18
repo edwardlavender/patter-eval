@@ -1,4 +1,0 @@
-# /Users/lavended/.juliaup/bin/julia
-JULIA_HOME = "/Users/lavended/.juliaup/bin/"
-JULIA_PROJ = "/Users/lavended/Documents/work/projects/particle-filters/patter/projects/patter-eval/Julia"
-PATTER.JL_DEV = "/Users/lavended/Documents/work/projects/particle-filters/patter/packages/Patter.jl"
