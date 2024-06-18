@@ -48,7 +48,7 @@ if (test) {
   cl <- 10L
 }
 
-#### Run workflow (~25 s)
+#### Run workflow (~1.5 mins)
 gc()
 tic()
 success <- cl_lapply(sims_for_performance_ls,
