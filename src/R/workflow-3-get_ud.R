@@ -213,7 +213,7 @@ get_ud_patter <- function(sim,
                    .coord = out_pff$states,
                    .discretise = TRUE,
                    .plot = FALSE,
-                   .verbose = TRUE,
+                   .verbose = FALSE,
                    sigma = sigma)
 
   #### Mapping (forward run)
