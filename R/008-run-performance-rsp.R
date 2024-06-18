@@ -64,12 +64,12 @@ success <-
           .fun = function(sim, .chunkargs) {
             # sim <- sims_for_performance_ls[[1]]
             print(sim$row)
-            tic()
+            # tic()
             success <- workflow_rsp(sim = sim,
                                     spat = .chunkargs$spat,
                                     spat_ll_dbb = .chunkargs$spat_ll_dbb,
                                     tm = tm)
-            toc()
+            # toc()
             success
           },
           .chunk = TRUE,
