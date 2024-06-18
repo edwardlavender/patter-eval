@@ -30,8 +30,8 @@ dv::src()
 
 # Validate gdistance for RSP
 library(gdistance)
-Sys.sleep(60)
-library(gdistance)
+# Sys.sleep(60)
+# library(gdistance)
 
 #### Load data
 spatw        <- readRDS(here_input("spatw.rds"))
@@ -46,15 +46,17 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Estimate UDs
 
 #### (optional) Test
-test <- FALSE
+test <- TRUE
 if (test) {
-  cl <- 1L
-  sims_for_performance_ls <- sims_for_performance_ls[1:2]
+  cl <- 10L
+  sims_for_performance_ls <- sims_for_performance_ls[1:100]
 } else {
-  cl <- 50L
+  cl <- 10L
 }
+# Time trial (100 rows, 10 cl): 41 mins
+# ETA (1181 rows, 10 cl)      : 8 hours (41 * 1181/100 / 60)
 
-#### Run workflow (~13 h on one cl)
+#### Run workflow
 gc()
 tic()
 success <-
@@ -97,7 +99,6 @@ if (interactive()) {
   points(m$receiver_x, m$receiver_y)
   par(pp)
 }
-
 
 
 #### End of code.
