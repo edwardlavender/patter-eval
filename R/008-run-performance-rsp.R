@@ -46,15 +46,16 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Estimate UDs
 
 #### (optional) Test
-test <- TRUE
+test <- FALSE
 if (test) {
-  cl <- 10L
+  cl <- 11L
   sims_for_performance_ls <- sims_for_performance_ls[1:100]
 } else {
-  cl <- 10L
+  cl <- 11L
 }
 # Time trial (100 rows, 10 cl): 41 mins
 # ETA (1181 rows, 10 cl)      : 8 hours (41 * 1181/100 / 60)
+# Result (1181 rows, 11 cl)   : 3.5 hours
 
 #### Run workflow
 gc()
@@ -63,7 +64,7 @@ success <-
   cl_lapply(sims_for_performance_ls,
           .fun = function(sim, .chunkargs) {
             # sim <- sims_for_performance_ls[[1]]
-            print(sim$row)
+            # print(sim$row)
             # tic()
             success <- workflow_rsp(sim = sim,
                                     spat = .chunkargs$spat,
@@ -75,7 +76,7 @@ success <-
           .chunk = TRUE,
           .chunk_fun = function(sim) {
             .chunkargs <- list(spat = terra::unwrap(spatw),
-                 spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
+                               spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
             .chunkargs
           },
           .cl = cl)
@@ -88,7 +89,7 @@ saveRDS(sdt, here_data("sims", "output", "success", "rsp.rds"))
 
 #### Quick checks
 if (interactive()) {
-  s <- sims_for_performance_ls[[1]]
+  s <- sims_for_performance_ls[[101]]
   pp <- par(mfrow = c(2, 3))
   here_alg(s, "path", "ud.tif")  |> terra_qplot()
   here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
