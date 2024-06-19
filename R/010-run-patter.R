@@ -44,6 +44,7 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Define sims
 type <- "performance"
 sims <- sims_for_performance
+sims[, n_particles := 5e4L]
 # type <- "sensitivity"
 # sims <- sims_for_sensitivity
 
@@ -52,7 +53,6 @@ sims <- sims_for_performance
 # Multi-threading in R uses a socket cluster (forking crashes the R session)
 multithread <- c("R", "Julia")
 multithread <- multithread[1]
-# multithread <- multithread[1]
 
 #### Connect to Julia
 if (multithread == "R") {
@@ -236,7 +236,7 @@ if (FALSE && multithread == "Julia") {
 # * (and run the former in multi-threaded Julia and the latter in R,
 # * but this is not currently tested)
 
-if (TRUE) {
+if (FALSE) {
 
   # Define simulation test subset
   # > Now run the code in the following section.
@@ -266,15 +266,20 @@ if (TRUE) {
   #                    158 s (* 2 = 316 s for ACPF & ACDCPF)
 
   # 1 algorithm run, 1 thread (bw.scott):
+  # (not currently implemented)
 
   # Multi-threaded R (bw.diggle):
+  # 100 simulations: 4854.023 s (1.34 hours)
+  # Total ETA      : 16 days
 
   # Multi-threaded R (bw.scott):
+  # (not currently implemented)
 
   # Multi-threaded Julia (bw.diggle):
+  # > 2 hours
 
   # Multi-threaded Julia (bw.scott):
-
+  # (not currently implemented)
 
 }
 
@@ -294,41 +299,49 @@ lapply(seq_len(nchunks), function(i) {
 
 #### Initialise cluster
 # We use a socket cluster, as the fork cluster crashes R
-cluster <- "socket" # "fork"
-if (cluster == "fork") {
+if (multithread == "Julia") {
 
-  cl <- rsockets
-  stop("The fork cluster crashes R.")
+  cl <- NULL
 
-} else if (cluster == "socket") {
+} else if (multithread == "R") {
 
-  # Spawn a separate Julia process on each core (~3 mins)
-  tic()
-  cl <- makeCluster(rsockets)
-  ignore <- c("spatw", "sims_for_performance", "sims_for_performance_ls")
-  export <- ls()[!(ls() %in% c())]
-  clusterExport(cl, export)
-  clusterEvalQ(cl, {
+  cluster <- "socket" # "fork"
+  if (cluster == "fork") {
 
-    # Load packages on each core
-    library(collapse)
-    library(dv)
-    library(patter)
-    library(data.table)
-    library(dtplyr)
-    library(dplyr, warn.conflicts = FALSE)
-    library(tictoc)
+    cl <- rsockets
+    stop("The fork cluster crashes R.")
 
-    # Each core uses single threaded DT and Julia implementations
-    setDTthreads(threads = 1)
-    julia_connect(.threads = 1)
+  } else if (cluster == "socket") {
 
-    # Set Julia objects on each core
-    spatw <- readRDS(here_input("spatw.rds"))
-    set_map(terra::unwrap(spatw))
-    set_seed()
-  })
-  toc()
+    # Spawn a separate Julia process on each core (~3 mins)
+    tic()
+    cl <- makeCluster(rsockets)
+    ignore <- c("spatw", "sims_for_performance", "sims_for_performance_ls")
+    export <- ls()[!(ls() %in% c())]
+    clusterExport(cl, export)
+    clusterEvalQ(cl, {
+
+      # Load packages on each core
+      library(collapse)
+      library(dv)
+      library(patter)
+      library(data.table)
+      library(dtplyr)
+      library(dplyr, warn.conflicts = FALSE)
+      library(tictoc)
+
+      # Each core uses single threaded DT and Julia implementations
+      setDTthreads(threads = 1)
+      julia_connect(.threads = 1)
+
+      # Set Julia objects on each core
+      spatw <- readRDS(here_input("spatw.rds"))
+      set_map(terra::unwrap(spatw))
+      set_seed()
+    })
+    toc()
+
+  }
 
 }
 
@@ -389,6 +402,8 @@ toc()
 
 #### Record success
 sdt <- rbindlist(sdt)
+table(sdt$acpf)
+table(sdt$acdcpf)
 saveRDS(sdt, here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
 
 
@@ -406,13 +421,25 @@ if (interactive()) {
     points(m$receiver_x, m$receiver_y)
   }
 
-  sim <- sims[3, ]
-  pp <- par(mfrow = c(2, 2))
-  qplot(here_alg(sim, "path", "ud.tif"))
+  # Plot UDs
+  pp <- par(mfrow = c(3, 2))
+  qplot(ud_path)
   qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
-  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
+  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
+  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
+  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
+  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
   par(pp)
+
+  # Plot skill (MB)
+  ud_path <- here_alg(sim, "path", "ud.tif") |> terra::rast()
+  ud_alg  <- c(here_alg(sim, "coa", "120 mins", "ud.tif") |> terra::rast(),
+               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif") |> terra::rast(),
+               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif") |> terra::rast(),
+               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif") |> terra::rast(),
+               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif") |> terra::rast())
+  barplot(skill_by_alg(ud_alg, ud_path, .f = skill_me),
+          names.arg = c("COA", "ACPF (F)", "ACPF (S)", "ACDCPF (F)", "ACDCPF (S)"))
 
 }
 

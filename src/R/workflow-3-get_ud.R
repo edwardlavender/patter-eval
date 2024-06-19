@@ -217,10 +217,12 @@ get_ud_patter <- function(sim,
                    sigma = sigma)
 
   #### Mapping (forward run)
+  # TO DO
+  # We can skip this for sensitivity analyses to improve speed
   t1_udf   <- Sys.time()
   udf      <- do.call(map_dens, map_args)$ud
   t2_udf   <- Sys.time()
-  udf_ok   <- !is.null(udf_ok)
+  udf_ok   <- !is.null(udf)
   if (udf_ok) {
     udf_mins <- mins(t2_udf, t1_udf)
   } else {
@@ -235,7 +237,7 @@ get_ud_patter <- function(sim,
   t1_uds          <- Sys.time()
   uds             <- do.call(map_dens, map_args)$ud
   t2_uds          <- Sys.time()
-  uds_ok          <- !is.null(udf)
+  uds_ok          <- !is.null(uds)
   if (uds_ok) {
     uds_mins      <- mins(t2_uds, t1_uds)
   } else {
