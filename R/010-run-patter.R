@@ -274,8 +274,9 @@ if (FALSE) {
   # (not currently implemented)
 
   # Multi-threaded R (bw.diggle):
-  # 100 simulations: 4854.023 s (1.34 hours)
-  # Total ETA      : 16 days
+  # 100 simulations   : 1.34 hours (4854.023 s)
+  # 1181 simulations  : 15.9 hours
+  # Total ETA         : 16 days
 
   # Multi-threaded R (bw.scott):
   # (not currently implemented)
