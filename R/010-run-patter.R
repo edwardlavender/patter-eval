@@ -421,23 +421,25 @@ if (interactive()) {
     points(m$receiver_x, m$receiver_y)
   }
 
+  # Define UD paths
+  sim     <- sims_for_performance[1, ]
+  ud_path <- here_alg(sim, "path", "ud.tif")
+  ud_alg  <- c(here_alg(sim, "coa", "120 mins", "ud.tif"),
+               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"),
+               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"),
+               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif") ,
+               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
+
   # Plot UDs
   pp <- par(mfrow = c(3, 2))
   qplot(ud_path)
-  qplot(here_alg(sim, "coa", "120 mins", "ud.tif"))
-  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
-  qplot(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
-  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
-  qplot(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
+  lapply(ud_alg, qplot)
   par(pp)
 
+  # Estimate file size
+  (sapply(ud_alg, file.size) / 1e6 )|> unname()
+
   # Plot skill (MB)
-  ud_path <- here_alg(sim, "path", "ud.tif") |> terra::rast()
-  ud_alg  <- c(here_alg(sim, "coa", "120 mins", "ud.tif") |> terra::rast(),
-               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif") |> terra::rast(),
-               here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif") |> terra::rast(),
-               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif") |> terra::rast(),
-               here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif") |> terra::rast())
   barplot(skill_by_alg(ud_alg, ud_path, .f = skill_me),
           names.arg = c("COA", "ACPF (F)", "ACPF (S)", "ACDCPF (F)", "ACDCPF (S)"))
 
