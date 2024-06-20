@@ -42,9 +42,17 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Julia connection
 
 #### Define sims
+# Define sims
 type <- "performance"
 sims <- sims_for_performance
+# (optional) Update number of particles
 sims[, n_particles := 5e4L]
+# Visualise n particles
+terra::plot(terra::unwrap(spatw))
+points(terra::spatSample(terra::unwrap(spatw),
+                         size = sims$n_particles[1],
+                         xy = TRUE, values = FALSE),
+       pch = ".")
 # type <- "sensitivity"
 # sims <- sims_for_sensitivity
 
@@ -144,6 +152,13 @@ if (FALSE && multithread == "Julia") {
                .n_resample = sim$n_particles,
                .verbose = FALSE)
 
+  #### Filter speeds (1 thread):
+  # The number of particles is a balance between speed & convergence.
+  # Other options are to tweak the resampling or use acoustic containers.
+  # * 10,000 particles: 3 secs
+  # * 25,000 particles: 9 secs
+  # * 50,000 particles: 18 secs
+
   #### Forward filter
   # Run filter
   out_pff  <- do.call(pf_filter, args, quote = TRUE)
@@ -241,11 +256,11 @@ if (FALSE && multithread == "Julia") {
 # * (and run the former in multi-threaded Julia and the latter in R,
 # * but this is not currently tested)
 
-if (FALSE) {
+if (TRUE) {
 
   # Define simulation test subset
   # > Now run the code in the following section.
-  sims <- sims[1:100L, ]
+  sims <- sims[1:200L, ]
 
   #### Guesses
 
@@ -308,6 +323,7 @@ lapply(seq_len(nchunks), function(i) {
 if (multithread == "Julia") {
 
   cl <- NULL
+  check_multithreading(multithread)
 
 } else if (multithread == "R") {
 
@@ -339,6 +355,7 @@ if (multithread == "Julia") {
       # Each core uses single threaded DT and Julia implementations
       setDTthreads(threads = 1)
       julia_connect(.threads = 1)
+      check_multithreading(multithread)
 
       # Set Julia objects on each core
       spatw <- readRDS(here_input("spatw.rds"))
@@ -355,8 +372,6 @@ if (multithread == "Julia") {
 # We are multi-threading:
 nrow(sims)
 multithread
-# We are using n Julia threads
-check_multithreading(multithread)
 # We are using the following sigma bandwidth estimator:
 formals(get_ud_patter)$sigma
 
@@ -407,10 +422,32 @@ sdt <-
 toc()
 
 #### Record success
+# With 10,000 particles, we have some convergence failures in 100 trials
+# With 50,000 particles, in 200 trials (1.5 hrs), we have:
+# * ACPF: success
+# * ACDCPF: 8 failures
+# With 50,000 particles and .n_resample = 1000, in 200 trials, we have:
+# * ACPF: success
+# * ACDCPF: 18 failures
+# With 50,000 particles and acoustic containers, in 200 trials, we have:
+# * ACPF: TO DO
+# * ACDCPF: TO DO
 sdt <- rbindlist(sdt)
 table(sdt$acpf)
 table(sdt$acdcpf)
 saveRDS(sdt, here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
+
+#### Quick examination of convergence failures
+# See also patter-debug.R
+# sdt <- readRDS(here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
+sdt[acpf == FALSE, ]
+sdt[acdcpf == FALSE, ]
+sim <- sims[sims$row == 66, ]
+vis_path  <- get_path(sim, readRDS(here_input("paths.rds")), qs::qread(here_input("detections.qs")))
+vis_array <- get_array(sim, readRDS(here_input("arrays.rds")))
+terra::plot(spat)
+spatPoints(vis_path$x, vis_path$y)
+spatPoints(vis_array$receiver_x, vis_array$receiver_y, cex = 2, col = "red")
 
 
 #########################
