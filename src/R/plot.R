@@ -18,6 +18,24 @@ spatAxes <- function(x) {
   axis(side = 4, pos = b[2], tck = 0.025, labels = FALSE)
 }
 
+# Add points to a map
+spatPoints <- function(x, y, ...) {
+  # Use terra::plot() to add points to a map for safety
+  # (with points(), points may be misplaced when par() is set)
+  terra::plot(terra::vect(cbind(x, y), crs = "EPSG:32629"),
+              ..., add = TRUE)
+}
+
+# Add paths to a map
+spatPath <- function(x, y, ...) {
+  n <- length(x)
+  p1 <- cbind(x, y)[1:(n - 1), ]
+  p2 <- cbind(x, y)[2:n, ]
+  x <- terra::vect(p1, crs = "EPSG:32629")
+  y <- terra::vect(p2, crs = "EPSG:32629")
+  terra::lines(x, y, arrows = TRUE, ...)
+}
+
 #' @title Add a smoother to a plot
 
 add_smoother <- function(x, y, ...) {
