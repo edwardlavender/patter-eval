@@ -194,65 +194,73 @@ get_ud_patter <- function(sim,
   # qs::qsave(out_pfb, out_file_pfb)
   saveRDS(TRUE, out_file_convergence)
 
-  #### Backward smoother
-  # (optional) TO DO
-  # * Improve speed by pre-defining box in Julia
-  # out_file_smo <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_smo.qs")
-  t1_pfbs      <- Sys.time()
-  out_smo      <- pf_smoother_two_filter(.map = spat,
-                                         .mobility = sim$mobility,
-                                         .n_particle = 1000L)
-  t2_pfbs      <- Sys.time()
-  pfbs_mins    <- mins(t2_pfbs, t1_pfbs)
-  # qs::qsave(out_smo, out_file_smo)
+  #### Mapping
+  # This code does not need to be run if we just want to check convergence
+  map <- FALSE
+  if (map) {
 
-  #### Map arguments
-  # Use .discretise = TRUE for speed
-  map_args <- list(.map = spat,
-                   .owin = win,
-                   .coord = out_pff$states,
-                   .discretise = TRUE,
-                   .plot = FALSE,
-                   .verbose = FALSE,
-                   sigma = sigma)
+    #### Backward smoother
+    # (optional) TO DO
+    # * Improve speed by pre-defining box in Julia
+    # out_file_smo <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_smo.qs")
+    t1_pfbs      <- Sys.time()
+    out_smo      <- pf_smoother_two_filter(.map = spat,
+                                           .mobility = sim$mobility,
+                                           .n_particle = 1000L)
+    t2_pfbs      <- Sys.time()
+    pfbs_mins    <- mins(t2_pfbs, t1_pfbs)
+    # qs::qsave(out_smo, out_file_smo)
 
-  #### Mapping (forward run)
-  # TO DO
-  # We can skip this for sensitivity analyses to improve speed
-  t1_udf   <- Sys.time()
-  udf      <- do.call(map_dens, map_args)$ud
-  t2_udf   <- Sys.time()
-  udf_ok   <- !is.null(udf)
-  if (udf_ok) {
-    udf_mins <- mins(t2_udf, t1_udf)
-  } else {
-    udf_mins <- NA_real_
+    #### Map arguments
+    # Use .discretise = TRUE for speed
+    map_args <- list(.map = spat,
+                     .owin = win,
+                     .coord = out_pff$states,
+                     .discretise = TRUE,
+                     .plot = FALSE,
+                     .verbose = FALSE,
+                     sigma = sigma)
+
+    #### Mapping (forward run)
+    # TO DO
+    # We can skip this for sensitivity analyses to improve speed
+    t1_udf   <- Sys.time()
+    udf      <- do.call(map_dens, map_args)$ud
+    t2_udf   <- Sys.time()
+    udf_ok   <- !is.null(udf)
+    if (udf_ok) {
+      udf_mins <- mins(t2_udf, t1_udf)
+    } else {
+      udf_mins <- NA_real_
+    }
+
+    #### Mapping (backward run)
+    # (For speed, this is not currently implemented)
+
+    #### Mapping (smoother)
+    map_args$.coord <- out_smo$states
+    t1_uds          <- Sys.time()
+    uds             <- do.call(map_dens, map_args)$ud
+    t2_uds          <- Sys.time()
+    uds_ok          <- !is.null(uds)
+    if (uds_ok) {
+      uds_mins      <- mins(t2_uds, t1_uds)
+    } else {
+      uds_mins <- NA_real_
+    }
+
+    #### Outputs
+    time <- data.table(id = sim$id,
+                       pff = pff_mins,
+                       pfbs = pfbs_mins,
+                       udf = udf_mins,
+                       uds = uds_mins)
+    qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
+    write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
+    write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
+
   }
 
-  #### Mapping (backward run)
-  # (For speed, this is not currently implemented)
-
-  #### Mapping (smoother)
-  map_args$.coord <- out_smo$states
-  t1_uds          <- Sys.time()
-  uds             <- do.call(map_dens, map_args)$ud
-  t2_uds          <- Sys.time()
-  uds_ok          <- !is.null(uds)
-  if (uds_ok) {
-    uds_mins      <- mins(t2_uds, t1_uds)
-  } else {
-    uds_mins <- NA_real_
-  }
-
-  #### Outputs
-  time <- data.table(id = sim$id,
-                     pff = pff_mins,
-                     pfbs = pfbs_mins,
-                     udf = udf_mins,
-                     uds = uds_mins)
-  qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
-  write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
-  write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
   return(TRUE)
 
 }
