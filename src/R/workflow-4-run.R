@@ -39,8 +39,8 @@ workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
 workflow_patter <- function(sim, spat, win) {
 
   # Read data
-  acoustics <- read_acoustics(sim)
-  archival  <- read_archival(sim)
+  acoustics  <- read_acoustics(sim)
+  archival   <- read_archival(sim)
 
   # Algorithm components
   t1         <- min(acoustics$timestamp)
@@ -56,8 +56,8 @@ workflow_patter <- function(sim, spat, win) {
   # ACPF algorithm
   success_acpf <- get_ud_patter(sim = sim,
                                 timeline = timeline,
-                                yobs = list(acoustics),
-                                model_obs = "ModelObsAcousticLogisTrunc",
+                                acoustics = acoustics,
+                                archival = NULL,
                                 model_move = model_move,
                                 algorithm = "acpf",
                                 spat = spat, win = win)
@@ -65,12 +65,13 @@ workflow_patter <- function(sim, spat, win) {
   # ACDCPF algorithm
   success_acdcpf <- get_ud_patter(sim = sim,
                                   timeline = timeline,
-                                  yobs = list(acoustics, archival),
-                                  model_obs = c("ModelObsAcousticLogisTrunc",
-                                                "ModelObsDepthUniform"),
+                                  acoustics = acoustics,
+                                  archival = archival,
                                   model_move = model_move,
                                   algorithm = "acdcpf",
                                   spat = spat, win = win)
+
   # Outputs
   data.table(row = sim$row, acpf = success_acpf, acdcpf = success_acdcpf)
+
 }
