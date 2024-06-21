@@ -25,6 +25,7 @@ library(patter)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(JuliaCall)
 library(microbenchmark)
 library(parallel)
 library(tictoc)
@@ -46,11 +47,12 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 type <- "performance"
 sims <- sims_for_performance
 # (optional) Update number of particles
-sims[, n_particles := 5e4L]
+sims[, n_particles := NULL]
+# sims[, n_particles := 5e4L]
 # Visualise n particles
 terra::plot(terra::unwrap(spatw))
 points(terra::spatSample(terra::unwrap(spatw),
-                         size = sims$n_particles[1],
+                         size = 30000L,
                          xy = TRUE, values = FALSE),
        pch = ".")
 # type <- "sensitivity"
@@ -66,6 +68,7 @@ multithread <- multithread[1]
 if (multithread == "R") {
 
   rsockets <- 10L
+  # rsockets <- 16L
 
   setDTthreads(threads = 1)
   # julia_connect(.threads = 1)
@@ -121,11 +124,12 @@ if (FALSE && multithread == "Julia") {
 
   #### Define simulation
   # (TO DO) Repeat the code with a few random choices to check result consistency
-  sim       <- sims_for_performance[1, ]
+  # sim <- sims_for_performance[row == 205, ]
+  sim <- sims_for_performance[row == 325, ]
 
   #### Read data
-  acoustics <- read_acoustics(sim)
-  archival  <- read_archival(sim)
+  acoustics  <- read_acoustics(sim); # tmp <- copy(acoustics)
+  archival   <- read_archival(sim)
 
   #### Algorithm components
   spat       <- terra::unwrap(spatw)
@@ -139,17 +143,30 @@ if (FALSE && multithread == "Julia") {
                               upper = {sim$mobility})"),
             dbn_angle = "Uniform(-pi, pi)")
 
+  #### Define observations
+  # yobs      <- list(acoustics)
+  # model_obs <- "ModelObsAcousticLogisTrunc"
+  containers  <- assemble_acoustics_containers(acoustics,
+                                               .direction = "forward",
+                                               .mobility = sim$mobility)
+  yobs        <- list(acoustics, containers)
+  model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
+  # yobs        <- list(acoustics, containers, archival)
+  # model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer", "ModelObsDepthUniform")
+  julia_command(ModelObsAcousticContainer)
+  julia_command(ModelObsAcousticContainer.logpdf_obs)
+
   #### Filter args
   args <- list(.map = spat,
                .timeline = timeline,
                .state = "StateXY",
                .xinit = NULL,
                .xinit_pars = list(mobility = sim$mobility),
-               .yobs = list(acoustics),
-               .model_obs = "ModelObsAcousticLogisTrunc",
+               .yobs = yobs,
+               .model_obs = model_obs,
                .model_move = model_move,
-               .n_particle = sim$n_particles,
-               .n_resample = sim$n_particles,
+               .n_particle = 10000L, #sim$n_particles,
+               .n_resample = 10000, #sim$n_particles,
                .verbose = FALSE)
 
   #### Filter speeds (1 thread):
@@ -166,10 +183,16 @@ if (FALSE && multithread == "Julia") {
   tmp      <- tempfile(fileext = ".qs")
   qs::qsave(out_pff$states, tmp)
   file.size(tmp) / 1e6
+  unlink(tmp)
 
   #### Backward filter
+  containers      <- assemble_acoustics_containers(acoustics,
+                                                   .direction = "backward",
+                                                   .mobility = sim$mobility)
+  args$.yobs      <- list(acoustics, containers)
+  # args$.yobs      <- list(acoustics, containers, archival)
   args$.direction <- "backward"
-  out_pfb  <- do.call(pf_filter, args, quote = TRUE)
+  out_pfb         <- do.call(pf_filter, args, quote = TRUE)
 
   #### Backward smoother
   out_smo <- pf_smoother_two_filter(.map = spat,
@@ -256,11 +279,11 @@ if (FALSE && multithread == "Julia") {
 # * (and run the former in multi-threaded Julia and the latter in R,
 # * but this is not currently tested)
 
-if (TRUE) {
+if (FALSE) {
 
   # Define simulation test subset
   # > Now run the code in the following section.
-  sims <- sims[1:200L, ]
+  sims <- sims[1:400L, ]
 
   #### Guesses
 
@@ -324,6 +347,8 @@ if (multithread == "Julia") {
 
   cl <- NULL
   check_multithreading(multithread)
+  julia_command(ModelObsAcousticContainer)
+  julia_command(ModelObsAcousticContainer.logpdf_obs)
 
 } else if (multithread == "R") {
 
@@ -358,6 +383,8 @@ if (multithread == "Julia") {
       check_multithreading(multithread)
 
       # Set Julia objects on each core
+      JuliaCall::julia_command(ModelObsAcousticContainer)
+      JuliaCall::julia_command(ModelObsAcousticContainer.logpdf_obs)
       spatw <- readRDS(here_input("spatw.rds"))
       set_map(terra::unwrap(spatw))
       set_seed()
@@ -421,17 +448,47 @@ sdt <-
   })
 toc()
 
-#### Record success
-# With 10,000 particles, we have some convergence failures in 100 trials
-# With 50,000 particles, in 200 trials (1.5 hrs), we have:
-# * ACPF: success
-# * ACDCPF: 8 failures
-# With 50,000 particles and .n_resample = 1000, in 200 trials, we have:
-# * ACPF: success
-# * ACDCPF: 18 failures
-# With 50,000 particles and acoustic containers, in 200 trials, we have:
-# * ACPF: TO DO
-# * ACDCPF: TO DO
+#### Record success (200 trials):
+#
+# Without acoustic containers:
+# * With 10,000 particles (~0.3 hrs):
+# - ACPF  : 6 failures
+# - ACDCPF: 28 failures
+# * With 50,000 particles (~1.5 hrs):
+# - ACPF  : success
+# - ACDCPF: 8 failures
+# * With 50,000 particles and infrequent resampling (.n_resample = 1000):
+# - ACPF  : success
+# - ACDCPF: 18 failures
+#
+# With acoustic containers:
+# * With 10,000 particles (~0.5 hrs):
+# - ACPF  : success
+# - ACDCPF: 9 failures
+# * With 50,000 particles (~1.75 hrs, computer busy):
+# - ACPF  : success
+# - ACDCPF: success
+#
+# Use different numbers of particles for the algorithms (with containers):
+# * With 10,000 (ACPF) and 30,000 (ACDCPF) particles, 400 sims (~1.75 hrs):
+# - ACPF  : success
+# - ACDCPF: 2 failures
+#
+# Conclusions
+# * Increasing particles, acoustic containers & regular re sampling all help convergence
+# * With small numbers of particles, acoustic containers help (both ACPF & ACDCPF)
+# * With larger numbers of particles, ACPF converges but ACDCPF convergence benefits from containers
+# * Re-sampling every time step appears to be beneficial for convergence
+#
+# Strategy
+# * ACPF:
+# > 10,000 particles was sufficient for convergence (with containers)
+# > Use 15,000 particles + containers + resampling every time step
+# * ACDCPF:
+# > 10,000 particles insufficient
+# > 30,000 particles almost always sufficient
+# > Use 40,000 particles
+
 sdt <- rbindlist(sdt)
 table(sdt$acpf)
 table(sdt$acdcpf)
