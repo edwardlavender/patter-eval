@@ -363,8 +363,8 @@ if (multithread == "Julia") {
     # Spawn a separate Julia process on each core (~3 mins)
     tic()
     cl <- makeCluster(rsockets)
-    ignore <- c("spatw", "sims_for_performance", "sims_for_performance_ls")
-    export <- ls()[!(ls() %in% c())]
+    ignore <- c("cl", "spatw", "sims_for_performance", "sims_for_performance_ls")
+    export <- ls()[!(ls() %in% ignore)]
     clusterExport(cl, export)
     clusterEvalQ(cl, {
 
