@@ -127,7 +127,7 @@ get_ud_rsp <- function(sim, spat, spat_ll_dbb, tm, type = c("default", "custom")
 }
 
 get_ud_patter <- function(sim,
-                          timeline, yobs, model_obs, model_move,
+                          timeline, acoustics, archival = NULL, model_move,
                           algorithm = c("acpf", "acdcpf"),
                           spat, win, sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE) {
@@ -154,21 +154,26 @@ get_ud_patter <- function(sim,
     return(readRDS(out_file_convergence))
   }
 
-  #### Filter args
+  #### Baseline filter args
   args <- list(.map = spat,
                .timeline = timeline,
                .state = "StateXY",
                .xinit = NULL,
                .xinit_pars = list(mobility = sim$mobility),
-               .yobs = yobs,
-               .model_obs = model_obs,
+               .yobs = NULL,
+               .model_obs = NULL,
                .model_move = model_move,
-               .n_particle = sim$n_particles,
-               .n_resample = sim$n_particles,
+               .n_particle = NULL,
+               .n_resample = NULL,
                .verbose = FALSE
                )
 
-  #### Forward filter
+  #### Forward filter arguments
+  args <- assemble_args(sim = sim, args = args,
+                        acoustics = acoustics, archival = archival, direction = "forward",
+                        algorithm = algorithm)
+
+  #### Forward filter implementation
   # out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
   t1_pff       <- Sys.time()
   out_pff      <- do.call(pf_filter, args, quote = TRUE)
@@ -180,9 +185,13 @@ get_ud_patter <- function(sim,
     return(FALSE)
   }
 
-  #### Backward filter
+  #### Backward filter arguments
+  args <- assemble_args(sim = sim, args = args,
+                        acoustics = acoustics, archival = archival, direction = "backward",
+                        algorithm = algorithm)
+
+  #### Backward filter implementation
   # out_file_pfb <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pfb.qs")
-  args$.direction <- "backward"
   t1_pfb          <- Sys.time()
   out_pfb         <- do.call(pf_filter, args, quote = TRUE)
   t2_pfb          <- Sys.time()
