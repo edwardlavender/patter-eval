@@ -11,8 +11,8 @@
 #### Log
 # Performance simulations (n = 1181):
 # * Machine         : SIA-LAVENDED
-# * Total wall time : 7.15 hrs (12 CPU) [ETA for 30,000 sims: 8 days]
-# * Convergence     : ACDPF (success); ACDCPF (4 failures)
+# * Total wall time : TO DO (UPDATE); 7.15 hrs (12 CPU) [ETA for 30,000 sims: 8 days]
+# * Convergence     : TO DO (UPDATE); ACDPF (success); ACDCPF (4 failures)
 # * File transfer   : NA
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
@@ -78,12 +78,12 @@ points(terra::spatSample(terra::unwrap(spatw),
 # We can multi-thread R or Julia code
 # Multi-threading in R uses a socket cluster (forking crashes the R session)
 multithread <- c("R", "Julia")
-multithread <- multithread[1]
+multithread <- multithread[2]
 
 #### Connect to Julia
 if (multithread == "R") {
 
-  rsockets <- 12L
+  rsockets <- 11L
   # rsockets <- 16L
 
   setDTthreads(threads = 1)
@@ -250,7 +250,10 @@ if (FALSE && multithread == "Julia") {
   #### Define simulation
   # (TO DO) Repeat the code with a few random choices to check result consistency
   # sim <- sims_for_performance[row == 205, ]
-  sim <- sims_for_performance[row == 325, ]
+  # sim <- sims_for_performance[row == 325, ]
+  # sim <- sims_for_performance[row == 47, ]  # 10,000 ok
+  # sim <- sims_for_performance[row == 145, ] # 10,000 ok
+  # sim <- sims_for_performance[row == 349, ] # 10,000 sometimes ok
 
   #### Read data
   acoustics  <- read_acoustics(sim); # tmp <- copy(acoustics)
@@ -274,10 +277,10 @@ if (FALSE && multithread == "Julia") {
   containers  <- assemble_acoustics_containers(acoustics,
                                                .direction = "forward",
                                                .mobility = sim$mobility)
-  yobs        <- list(acoustics, containers)
-  model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
-  # yobs        <- list(acoustics, containers, archival)
-  # model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer", "ModelObsDepthUniform")
+  # yobs        <- list(acoustics, containers)
+  # model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
+  yobs        <- list(acoustics, containers, archival)
+  model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer", "ModelObsDepthUniform")
 
   #### Filter args
   args <- list(.map = spat,
@@ -312,8 +315,8 @@ if (FALSE && multithread == "Julia") {
   containers      <- assemble_acoustics_containers(acoustics,
                                                    .direction = "backward",
                                                    .mobility = sim$mobility)
-  args$.yobs      <- list(acoustics, containers)
-  # args$.yobs      <- list(acoustics, containers, archival)
+  # args$.yobs      <- list(acoustics, containers)
+  args$.yobs      <- list(acoustics, containers, archival)
   args$.direction <- "backward"
   out_pfb         <- do.call(pf_filter, args, quote = TRUE)
 
@@ -402,7 +405,7 @@ if (FALSE && multithread == "Julia") {
 # * (and run the former in multi-threaded Julia and the latter in R,
 # * but this is not currently tested)
 
-if (FALSE) {
+if (TRUE) {
 
   # Define simulation test subset
   # > Now run the code in the following section.
@@ -423,6 +426,7 @@ if (FALSE) {
   (nsim * guess)/60/60/24/1
 
   #### Empirical timings
+  # NB: These timings are approximate (routines updated subsequently)
 
   # 1 algorithm run, 1 thread (bw.diggle):
   # * Forward filter:    4 s
@@ -571,6 +575,8 @@ toc()
 
 #### Record success (200 trials):
 #
+# NB: These timings are approximate (routines updated subsequently)
+#
 # Without acoustic containers:
 # * With 10,000 particles (~0.3 hrs):
 # - ACPF  : 6 failures
@@ -591,6 +597,9 @@ toc()
 # - ACDCPF: success
 #
 # Use different numbers of particles for the algorithms (with containers):
+# * With 5,000 (ACPF) and 20,000 (ACDCPF) particles, 400 sims (~1 hr):
+# - ACPF  : success
+# - ACDCPF: 3 failures (row: 47, 145, 349)
 # * With 10,000 (ACPF) and 30,000 (ACDCPF) particles, 400 sims (~1.75 hrs):
 # - ACPF  : success
 # - ACDCPF: 2 failures
@@ -603,12 +612,12 @@ toc()
 #
 # Strategy
 # * ACPF:
-# > 10,000 particles was sufficient for convergence (with containers)
-# > Use 15,000 particles + containers + resampling every time step
+# > 5,000 particles was sufficient for convergence (with containers)
+# > Use 5,000 particles + containers + resampling every time step
 # * ACDCPF:
 # > 10,000 particles insufficient
-# > 30,000 particles almost always sufficient
-# > Use 40,000 particles
+# > 20,000 particles almost always sufficient
+# > Use 30,000 particles
 
 sdt <- rbindlist(sdt)
 table(sdt$acpf)
