@@ -8,6 +8,21 @@
 #### Prerequisites
 # 1) Simulate data & prepare for algorithm implementation
 
+#### Log
+# Performance simulations (n = 1181):
+# * Machine         : SIA-LAVENDED
+# * Total wall time : 7.15 hrs (12 CPU) [ETA for 30,000 sims: 8 days]
+# * Convergence     : ACDPF (success); ACDCPF (4 failures)
+# * File transfer   : NA
+# Sensitivity simulations
+# * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
+# * 1:5000        : {machine}; {time}; {copied}
+# * 5001:10000    :
+# * 10001:15000   :
+# * 15000:20000   :
+# * 20001:25000   :
+# * 25000:end     :
+
 
 #########################
 #########################
@@ -28,6 +43,7 @@ library(dplyr, warn.conflicts = FALSE)
 library(JuliaCall)
 library(microbenchmark)
 library(parallel)
+library(testthat)
 library(tictoc)
 dv::src()
 
@@ -67,7 +83,7 @@ multithread <- multithread[1]
 #### Connect to Julia
 if (multithread == "R") {
 
-  rsockets <- 10L
+  rsockets <- 12L
   # rsockets <- 16L
 
   setDTthreads(threads = 1)
@@ -82,6 +98,115 @@ if (multithread == "R") {
 
   set_seed()
   set_map(terra::unwrap(spatw))
+
+  JuliaCall::julia_command(ModelObsAcousticContainer)
+  JuliaCall::julia_command(ModelObsAcousticContainer.logpdf_obs)
+
+}
+
+
+#########################
+#########################
+#### Test routines
+
+# This code validates the workflow_patter() function used to run simulations (~20 mins).
+# > All tests passed.
+
+if (FALSE & multithread == "Julia") {
+
+  #### Run tests for a random selection of simulations
+  tic()
+  for (i in c(1, 2, 140, 204, 595, 1001)) {
+
+    #### Implement workflow_patter() with `test = TRUE`
+    # i <- 1
+    message(paste("Test", i))
+    sim  <- sims_for_performance[i, ]
+    test <- workflow_patter(sim = sim,
+                            spat = terra::unwrap(spatw),
+                            win = win,
+                            test = TRUE)
+
+    #### Verify alignment of input datasets
+    # All time series should be defined between the first/last detection
+    test$input$path
+    test$input$acoustics
+    test$input$archival
+    start <- c(min(test$input$timeline),
+               min(test$input$path$timestamp),
+               min(test$input$acoustics$timestamp),
+               min(test$input$archival$timestamp))
+    end <- c(max(test$input$timeline),
+             max(test$input$path$timestamp),
+             max(test$input$acoustics$timestamp),
+             max(test$input$archival$timestamp))
+    expect_true(length(unique(start)) == 1L)
+    expect_true(length(unique(end)) == 1L)
+    expect_equal(test$input$timeline, test$input$path$timestamp)
+    expect_equal(test$input$timeline, test$input$archival$timestamp)
+
+    #### Verify incorporation of detections (~10 s): ok.
+    cl_lapply(c("acpf", "acdcpf"), function(algorithm) {
+
+      lapply(c("pff", "pfb", "smo"), function(fun) {
+
+        # algorithm <- "acdcpf"; fun <- "pff"
+        print(paste(algorithm, fun))
+
+        # Define particles
+        particles <- test$output[[algorithm]]$particles[[fun]]$states
+
+        # Validate map_value
+        particles[, map_value_terra := terra::extract(terra::unwrap(spatw), cbind(particles$x, particles$y))[, 1]]
+        head(particles[, .(map_value, map_value_terra)])
+        expect_true(max(abs(particles$map_value - particles$map_value_terra)) < 1e5)
+
+        # Define detections
+        detections <-
+          sim |>
+          read_acoustics() |>
+          filter(obs == 1L) |>
+          select(timestamp, receiver_x, receiver_y) |>
+          as.data.table()
+
+        # Define corresponding states
+        states <-
+          particles |>
+          filter(timestamp %in% detections$timestamp) |>
+          select(timestamp, x, y) |>
+          as.data.table()
+
+        # Verify that all states are within detection ranges (sim$gamma)
+        # * Note there may be multiple detections at any one time step that we pair against multiple states
+        any(duplicated(detections$timestamp))
+        dist_from_receiver <-
+          full_join(detections, states, relationship = "many-to-many") |>
+          mutate(dist = terra::distance(cbind(receiver_x, receiver_y), cbind(x, y), lonlat = FALSE, pairwise = TRUE)) |>
+          pull(dist)
+        expect_true(all(dist_from_receiver <= sim$gamma))
+
+      })
+
+    })
+
+    #### Verify archival data
+    cl_lapply(c("pff", "pfb", "smo"), function(fun) {
+
+      # Define particles
+      particles <- test$output$acdcpf$particles[[fun]]$states
+
+      # Define path
+      path <- read_path(sim)
+
+      # Verify that all state map_value is within ± 5 m of the observed depth
+      v <- left_join(particles, path, by = "timestamp", suffix = c("_state", "_path")) |> as.data.table()
+      v[, valid := depth >= map_value_state - 5 & depth <= map_value_state + 5]
+      expect_true(all(v$valid))
+
+    })
+
+  }
+  toc()
 
 }
 
@@ -153,8 +278,6 @@ if (FALSE && multithread == "Julia") {
   model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
   # yobs        <- list(acoustics, containers, archival)
   # model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer", "ModelObsDepthUniform")
-  julia_command(ModelObsAcousticContainer)
-  julia_command(ModelObsAcousticContainer.logpdf_obs)
 
   #### Filter args
   args <- list(.map = spat,
@@ -347,8 +470,6 @@ if (multithread == "Julia") {
 
   cl <- NULL
   check_multithreading(multithread)
-  julia_command(ModelObsAcousticContainer)
-  julia_command(ModelObsAcousticContainer.logpdf_obs)
 
 } else if (multithread == "R") {
 
@@ -522,26 +643,34 @@ if (interactive()) {
   }
 
   # Define UD paths
-  sim     <- sims_for_performance[1, ]
+  sim     <- sims_for_performance[1000, ]
   ud_path <- here_alg(sim, "path", "ud.tif")
-  ud_alg  <- c(here_alg(sim, "coa", "120 mins", "ud.tif"),
+  ud_alg  <- c(here_alg(sim, "coa", "30 mins", "ud.tif"),
+               here_alg(sim, "coa", "120 mins", "ud.tif"),
+               here_alg(sim, "rsp", "default", "ud.tif"),
+               here_alg(sim, "rsp", "custom", "ud.tif"),
                here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"),
                here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"),
                here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif") ,
                here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
 
   # Plot UDs
-  pp <- par(mfrow = c(3, 2))
+  pp <- par(mfrow = c(5, 2))
   qplot(ud_path)
   lapply(ud_alg, qplot)
   par(pp)
 
   # Estimate file size
-  (sapply(ud_alg, file.size) / 1e6 )|> unname()
+  (sapply(ud_alg, file.size) / 1e6 ) |> unname()
 
   # Plot skill (MB)
+  ud_path <- ud_path |> terra::rast()
+  ud_alg  <- sapply(ud_alg, function(f) terra::rast(f))
   barplot(skill_by_alg(ud_alg, ud_path, .f = skill_me),
-          names.arg = c("COA", "ACPF (F)", "ACPF (S)", "ACDCPF (F)", "ACDCPF (S)"))
+          names.arg = c("COA (1)", "COA (2)",
+                        "RSP (1)", "RSP (2)",
+                        "ACPF (F)", "ACPF (S)",
+                        "ACDCPF (F)", "ACDCPF (S)"))
 
 }
 
