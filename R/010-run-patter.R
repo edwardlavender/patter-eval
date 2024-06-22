@@ -78,7 +78,7 @@ points(terra::spatSample(terra::unwrap(spatw),
 # We can multi-thread R or Julia code
 # Multi-threading in R uses a socket cluster (forking crashes the R session)
 multithread <- c("R", "Julia")
-multithread <- multithread[2]
+multithread <- multithread[1]
 
 #### Connect to Julia
 if (multithread == "R") {
@@ -652,7 +652,7 @@ if (interactive()) {
   }
 
   # Define UD paths
-  sim     <- sims_for_performance[1000, ]
+  sim     <- sims_for_performance[400, ]
   ud_path <- here_alg(sim, "path", "ud.tif")
   ud_alg  <- c(here_alg(sim, "coa", "30 mins", "ud.tif"),
                here_alg(sim, "coa", "120 mins", "ud.tif"),
