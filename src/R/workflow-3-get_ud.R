@@ -130,7 +130,8 @@ get_ud_patter <- function(sim,
                           timeline, acoustics, archival = NULL, model_move,
                           algorithm = c("acpf", "acdcpf"),
                           spat, win, sigma = spatstat.explore::bw.diggle,
-                          overwrite = TRUE) {
+                          overwrite = TRUE,
+                          test = FALSE) {
 
   #### (optional) TO DO
   # Split get_ud_patter() into two functions
@@ -145,6 +146,11 @@ get_ud_patter <- function(sim,
   # - through writing to disk also has a (high) speed penalty
   # * But requires much more storage space (see run-patter.R)
   # * Currently, we do not save particle samples to minimise storage costs
+
+  #### Check inputs
+  if (test) {
+    warning("Test is true!", immediate. = TRUE)
+  }
 
   #### (optional) Prior run checks
   # Return FALSE, if previous convergence failure
@@ -169,9 +175,10 @@ get_ud_patter <- function(sim,
                )
 
   #### Forward filter arguments
-  args <- assemble_args(sim = sim, args = args,
-                        acoustics = acoustics, archival = archival, direction = "forward",
-                        algorithm = algorithm)
+  algorithm <- match.arg(algorithm)
+  args      <- assemble_args(sim = sim, args = args,
+                             acoustics = acoustics, archival = archival, direction = "forward",
+                             algorithm = algorithm)
 
   #### Forward filter implementation
   # out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
@@ -205,7 +212,7 @@ get_ud_patter <- function(sim,
 
   #### Mapping
   # This code does not need to be run if we just want to check convergence
-  map <- FALSE
+  map <- TRUE
   if (map) {
 
     #### Backward smoother
@@ -268,8 +275,27 @@ get_ud_patter <- function(sim,
     write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
     write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
 
+  } else {
+    stop("`map` is FALSE! This is only for testing convergence!")
   }
 
-  return(TRUE)
+  #### Return outputs
+  if (test) {
+
+    return(
+      list(
+        particles = list(pff = out_pff,
+                         pfb = out_pfb,
+                         smo = out_smo),
+        uds = list(udf = udf,
+                   uds = uds)
+      )
+    )
+
+  } else {
+
+    return(TRUE)
+
+  }
 
 }
