@@ -405,7 +405,7 @@ if (FALSE && multithread == "Julia") {
 # * (and run the former in multi-threaded Julia and the latter in R,
 # * but this is not currently tested)
 
-if (TRUE) {
+if (FALSE) {
 
   # Define simulation test subset
   # > Now run the code in the following section.
