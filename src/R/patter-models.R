@@ -222,7 +222,7 @@ assemble_args <- function(sim, args, acoustics, archival, direction, algorithm) 
     # model_obs    <- "ModelObsAcousticLogisTrunc"
     yobs         <- list(acoustics, containers)
     model_obs    <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
-    np           <- 10000L
+    np           <- 5000L
 
   } else if (algorithm == "acdcpf") {
 
@@ -230,7 +230,7 @@ assemble_args <- function(sim, args, acoustics, archival, direction, algorithm) 
     # model_obs    <- c("ModelObsAcousticLogisTrunc", "ModelObsDepthUniform")
     yobs         <- list(acoustics, containers, archival)
     model_obs    <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer", "ModelObsDepthUniform")
-    np           <- 40000L
+    np           <- 30000L
 
   }
 
