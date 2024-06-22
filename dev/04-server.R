@@ -70,7 +70,8 @@ expect_true(all(success))
 #### Clean up patter outputs (~5 s)
 tic()
 unlink(logs)
-unlink(file.path(here_output(), outputs))
+expect_true(file.exists(file.path(here_output("run"), outputs[1])))
+unlink(file.path(here_output("run"), outputs))
 toc()
 
 
