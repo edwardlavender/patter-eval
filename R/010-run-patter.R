@@ -83,7 +83,7 @@ multithread <- multithread[1]
 #### Connect to Julia
 if (multithread == "R") {
 
-  rsockets <- 11L
+  rsockets <- 12L
   # rsockets <- 16L
 
   setDTthreads(threads = 1)
@@ -526,6 +526,10 @@ nrow(sims)
 multithread
 # We are using the following sigma bandwidth estimator:
 formals(get_ud_patter)$sigma
+# The first files to be created should appear here:
+here_alg(sims[1, ], "patter", "acpf", sims$alg_par[1])
+# > Check all files are created after a few mins:
+# > time.qs, ud-f.tif, ud-s.tif
 
 #### Estimate UDs
 gc()
