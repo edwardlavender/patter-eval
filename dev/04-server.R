@@ -113,7 +113,7 @@ expect_false(file.exists(logs_path[1]))
 outputs_path <- file.path(here_output("run"), outputs)
 expect_true(file.exists(outputs_path[1]))
 unlink(outputs_path)
-expect_false(outputs_path[1])
+expect_false(file.exists(outputs_path[1]))
 toc()
 
 
