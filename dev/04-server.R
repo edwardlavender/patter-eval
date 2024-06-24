@@ -22,10 +22,16 @@ try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
 
 #### Essential packages
+library(collapse)
+library(data.table)
 library(patter)
+library(stringr)
 library(testthat)
 library(tictoc)
 dv::src()
+
+#### Load data
+sims <- readRDS(here_input("sims-performance.rds"))
 
 
 #########################
@@ -37,16 +43,44 @@ dv::src()
 
 #### List patter outputs (~5 s)
 tic()
-logs    <- list.files(here_output("log", "patter", "performance"),
-                      full.names = TRUE)
+# List logs
+logs    <- list.files(here_output("log", "patter", "performance"))
+head(logs)
+# List outputs
 outputs <- list.files(here_output("run"), recursive = TRUE)
-outputs <- outputs[stringr::str_detect(outputs, "patter")]
+outputs <- outputs[str_detect(outputs, "patter")]
+head(outputs)
 toc()
 
-#### (optional) Transfer log files
+#### Compare computed outputs to expected outputs for a selected sims batch
+# This is the set of directories that we expect to contain outputs (see here_alg()):
+batch <- 1:1181
+sims  <- sims[batch, ]
+# algorithm <- "acpf"
+algorithm   <- "acdcpf"
+folders <- file.path(sims$combination, sims$array_type, sims$array_realisation,
+                     sims$path_realisation, "patter", "acpf", sims$alg_par)
+# These are the ones that have files attached (~3 s):
+expected <- data.table(folder = folders, success = FALSE)
+tic()
+for (i in seq_row(expected)) {
+  # print(i)
+  # any(str_detect(outputs, expected$folder[1]))
+  # Check for any outputs in the expected folder
+  expected[i, success := any(str_detect(outputs, expected$folder[i]))]
+}
+toc()
+table(expected$success)
+# Check specifically for convergence.rds
+expected <- file.path(sims$combination, sims$array_type, sims$array_realisation,
+                      sims$path_realisation, "patter", "acpf", sims$alg_par,
+                      "convergence.rds")
+table(expected %in% outputs)
+
+#### Transfer log.txt files
 # TO DO
 
-#### Transfer success record (sdt)
+#### Transfer success record (sdt) for batch
 # TO DO
 
 #### Transfer outputs
@@ -70,12 +104,16 @@ expect_true(all(success))
 
 #### Clean up patter outputs (~5 s)
 tic()
-expect_true(file.exists(logs[1]))
-unlink(logs)
-expect_false(file.exists(logs[1]))
-expect_true(file.exists(file.path(here_output("run"), outputs[1])))
-unlink(file.path(here_output("run"), outputs))
-expect_false(file.exists(file.path(here_output("run"), outputs[1])))
+# Logs
+logs_path <- file.path(here_output("log", "patter", "performance"), logs)
+expect_true(file.exists(logs_path[1]))
+unlink(logs_path)
+expect_false(file.exists(logs_path[1]))
+# Outputs
+outputs_path <- file.path(here_output("run"), outputs)
+expect_true(file.exists(outputs_path[1]))
+unlink(outputs_path)
+expect_false(outputs_path[1])
 toc()
 
 
