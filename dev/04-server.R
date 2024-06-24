@@ -37,7 +37,8 @@ dv::src()
 
 #### List patter outputs (~5 s)
 tic()
-logs    <- list.files(here_output("log", "patter", "performance"))
+logs    <- list.files(here_output("log", "patter", "performance"),
+                      full.names = TRUE)
 outputs <- list.files(here_output("run"), recursive = TRUE)
 outputs <- outputs[stringr::str_detect(outputs, "patter")]
 toc()
@@ -69,9 +70,12 @@ expect_true(all(success))
 
 #### Clean up patter outputs (~5 s)
 tic()
+expect_true(file.exists(logs[1]))
 unlink(logs)
+expect_false(file.exists(logs[1]))
 expect_true(file.exists(file.path(here_output("run"), outputs[1])))
 unlink(file.path(here_output("run"), outputs))
+expect_false(file.exists(file.path(here_output("run"), outputs[1])))
 toc()
 
 
