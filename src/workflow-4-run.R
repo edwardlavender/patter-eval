@@ -36,7 +36,7 @@ workflow_rsp <- function(sim, spat, spat_ll_dbb, tm) {
   data.frame(row = sim$row, rsp_1 = s1, rsp_2 = s2)
 }
 
-workflow_patter <- function(sim, spat, win, test = FALSE) {
+workflow_patter <- function(sim, spat, win, performance = TRUE, test = FALSE) {
 
   # Read data
   acoustics  <- read_acoustics(sim)
@@ -61,6 +61,7 @@ workflow_patter <- function(sim, spat, win, test = FALSE) {
                                 model_move = model_move,
                                 algorithm = "acpf",
                                 spat = spat, win = win,
+                                performance = performance,
                                 test = test)
 
   # ACDCPF algorithm
@@ -71,6 +72,7 @@ workflow_patter <- function(sim, spat, win, test = FALSE) {
                                   model_move = model_move,
                                   algorithm = "acdcpf",
                                   spat = spat, win = win,
+                                  performance = performance,
                                   test = test)
 
   # Outputs

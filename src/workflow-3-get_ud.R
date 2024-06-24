@@ -131,6 +131,7 @@ get_ud_patter <- function(sim,
                           algorithm = c("acpf", "acdcpf"),
                           spat, win, sigma = spatstat.explore::bw.diggle,
                           overwrite = TRUE,
+                          performance = TRUE,
                           test = FALSE) {
 
   #### (optional) TO DO
@@ -239,15 +240,19 @@ get_ud_patter <- function(sim,
                      sigma = sigma)
 
     #### Mapping (forward run)
-    # TO DO
-    # We can skip this for sensitivity analyses to improve speed
-    t1_udf   <- Sys.time()
-    udf      <- do.call(map_dens, map_args)$ud
-    t2_udf   <- Sys.time()
-    udf_ok   <- !is.null(udf)
-    if (udf_ok) {
-      udf_mins <- mins(t2_udf, t1_udf)
+    # We only implement this for the performance simulations (for speed)
+    if (performance) {
+      t1_udf   <- Sys.time()
+      udf      <- do.call(map_dens, map_args)$ud
+      t2_udf   <- Sys.time()
+      udf_ok   <- !is.null(udf)
+      if (udf_ok) {
+        udf_mins <- mins(t2_udf, t1_udf)
+      } else {
+        udf_mins <- NA_real_
+      }
     } else {
+      udf      <- NULL
       udf_mins <- NA_real_
     }
 
@@ -273,7 +278,9 @@ get_ud_patter <- function(sim,
                        udf = udf_mins,
                        uds = uds_mins)
     qs::qsave(time, here_alg(sim, "patter", algorithm, sim$alg_par, "time.qs"))
-    write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
+    if (performance) {
+      write_rast(udf, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-f.tif"))
+    }
     write_rast(uds, here_alg(sim, "patter", algorithm, sim$alg_par, "ud-s.tif"))
 
   } else {

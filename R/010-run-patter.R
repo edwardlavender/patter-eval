@@ -60,20 +60,22 @@ sims_for_sensitivity <- readRDS(here_input("sims-sensitivity.rds"))
 
 #### Define sims
 #
+# Define type
+# type      <- "performance"
+type        <- "sensitivity"
+performance <- ifelse(type == "performance", TRUE, FALSE)
+#
 # Performance simulations:
-# type     <- "performance"
 # sims     <- copy(sims_for_performance)
 # batch    <- 1:nrow(sims)
-# batch_id <- min(batch)
 #
 # Sensitivity simulations:"
-type     <- "sensitivity"
 sims     <- copy(sims_for_sensitivity)
 batch    <- 1:1000L
-batch_id <- min(batch)
 #
-# Subset sims by batch
-sims <- sims[batch, ]
+# Subset sims by batch & define batch_id
+sims     <- sims[batch, ]
+batch_id <- min(batch)
 #
 # Cleanup:
 rm(sims_for_performance, sims_for_sensitivity)
@@ -140,6 +142,7 @@ if (FALSE & multithread == "Julia") {
     test <- workflow_patter(sim = sim,
                             spat = terra::unwrap(spatw),
                             win = win,
+                            performance = performance,
                             test = TRUE)
 
     #### Verify alignment of input datasets
@@ -576,8 +579,8 @@ sdt <-
         cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
         s <- workflow_patter(sim = sim,
-                             spat = spat,
-                             win = win)
+                             spat = spat, win = win,
+                             performance = performance)
         t2 <- Sys.time()
         difftime(t2, t1, units = "secs")
         cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))
