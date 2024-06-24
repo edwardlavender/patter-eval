@@ -11,8 +11,8 @@
 #### Log
 # Performance simulations (n = 1181):
 # * Machine         : SIA-LAVENDED
-# * Total wall time : TO DO (UPDATE); 7.15 hrs (12 CPU) [ETA for 30,000 sims: 8 days]
-# * Convergence     : TO DO (UPDATE); ACDPF (success); ACDCPF (4 failures)
+# * Total wall time : 26.5 hours (7.15 hrs for algorithms only) on 12 CPU
+# * Convergence     : ACDPF (1 failure); ACDCPF (1 failure)
 # * File transfer   : NA
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
@@ -623,6 +623,13 @@ toc()
 # > 20,000 particles almost always sufficient
 # > Use 30,000 particles
 
+#### Record success (simulations)
+#
+# Performance simulations (n = 1181)
+# * Convergence: ACPF (1 failure: row 872); ACDCPF (1 failure: row 472);
+# * Time: 1.11 days (12 socket clusters; MacBook)
+#
+
 sdt <- rbindlist(sdt)
 table(sdt$acpf)
 table(sdt$acdcpf)
@@ -656,7 +663,7 @@ if (interactive()) {
   }
 
   # Define UD paths
-  sim     <- sims_for_performance[400, ]
+  sim     <- sims_for_performance[1000, ]
   ud_path <- here_alg(sim, "path", "ud.tif")
   ud_alg  <- c(here_alg(sim, "coa", "30 mins", "ud.tif"),
                here_alg(sim, "coa", "120 mins", "ud.tif"),
