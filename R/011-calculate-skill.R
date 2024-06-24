@@ -40,11 +40,11 @@ sims <- readRDS(here_input("sims-performance.rds"))
 #### (optional) Test
 test <- FALSE
 if (test) {
-  sims <- sims[1:2, ]
-  cl <- 1L
+  sims  <- sims[1:2, ]
+  cl    <- 1L
   chunk <- FALSE
 } else {
-  cl    <- 20L
+  cl    <- 10L
   chunk <- TRUE
 }
 # (optional) Debug with parallel = FALSE
@@ -59,7 +59,7 @@ if (!parallel) {
 # * Read path UD & algorithm UD (if available)
 # * Calculate skill for relevant algorithms
 
-# ~ 3.7 mins, 10 cl, 600 performance simulations
+# ~10.8 mins, 1181 performance simulations
 
 tic()
 gc()
@@ -69,6 +69,7 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
                     .fun = function(sim) {
 
   #### Define outfile
+  # sim <- sims[1, ]
   out_file  <- here_output("skill", paste0(sim$id, ".rds"))
   overwrite <- FALSE
   if (!overwrite && file.exists(out_file)) {
@@ -76,7 +77,6 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
   }
 
   #### Read UDs
-  # sim <- sims[1, ]
   print(sim$row)
   path   <- terra::rast(here_alg(sim, "path", "ud.tif"))
   null   <- terra::rast(here_input("blank.tif"))
@@ -88,8 +88,6 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
   }
   acpff   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
   acdcpff <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
-  acpfk   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-  acdcpfk <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
   acpfs   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
   acdcpfs <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
 
@@ -97,7 +95,7 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
   skill <- data.table(
     id = sim$id,
     performance = sim$performance,
-    alg = c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(K)", "ACDCPF(K)", "ACPF(S)", "ACDCPF(S)"),
+    alg = c("Null", "COA(30)", "COA(120)", "RSP(1)", "RSP(2)", "ACPF(F)", "ACDCPF(F)", "ACPF(S)", "ACDCPF(S)"),
     mb = NA_real_,
     me = NA_real_,
     rmse = NA_real_,
@@ -108,16 +106,16 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
   #### Calculate skill metrics
   if (sim$performance) {
     # We will calculate model skill scores for each algorithm
-    uds <- list(null, coa_1, coa_2, rsp_1, rsp_2, acpff, acdcpff, acpfk, acdcpfk, acpfs, acdcpfs)
+    uds <- list(null, coa_1, coa_2, rsp_1, rsp_2, acpff, acdcpff, acpfs, acdcpfs)
   } else {
     # We will calculate model skill scores for patter algorithms only
-    uds <- list(null, NULL, NULL, NULL, NULL, acpff, acdcpff, acpfk, acdcpfk, acpfs, acdcpfs)
+    uds <- list(null, NULL, NULL, NULL, NULL, acpff, acdcpff, acpfs, acdcpfs)
   }
-  skill$mb   <- skill_by_alg(uds, path, skill_mb)
-  skill$me   <- skill_by_alg(uds, path, skill_me)
-  skill$rmse <- skill_by_alg(uds, path, skill_rmse)
-  skill$R    <- skill_by_alg(uds, path, skill_R)
-  skill$d    <- skill_by_alg(uds, path, skill_d)
+  skill[, mb := skill_by_alg(uds, path, skill_mb)]
+  skill[, me   := skill_by_alg(uds, path, skill_me)]
+  skill[, rmse := skill_by_alg(uds, path, skill_rmse)]
+  skill[, R := skill_by_alg(uds, path, skill_R)]
+  skill[, d := skill_by_alg(uds, path, skill_d)]
 
   #### Return outputs
   saveRDS(skill, out_file)
@@ -126,7 +124,7 @@ skills <- cl_lapply(.x = split(sims, seq_len(nrow(sims))),
 }) |> rbindlist()
 toc()
 
-saveRDS(skills, here_data("sims", "synthesis", "skill-raw.rds"))
+saveRDS(skills, here_output("synthesis", "skill-raw.rds"))
 
 
 #########################
@@ -144,7 +142,7 @@ nrow(skills)
 skills <- merge(skills, sims, by = "id")
 
 #### Save processed data
-saveRDS(skills, here_data("sims", "synthesis", "skill.rds"))
+saveRDS(skills, here_output("synthesis", "skill.rds"))
 
 
 #### End of code.
