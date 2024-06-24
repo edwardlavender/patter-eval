@@ -537,8 +537,11 @@ if (multithread == "Julia") {
 
 #### Check cluster settings
 # We are multi-threading:
-nrow(sims)
 multithread
+# We are using nchunks:
+nchunks
+# For n simulations
+nrow(sims)
 # We are using the following sigma bandwidth estimator:
 formals(get_ud_patter)$sigma
 # The first files to be created should appear here:
