@@ -539,6 +539,8 @@ if (multithread == "Julia") {
 }
 
 #### Check cluster settings
+# We are running:
+glue::glue("{type} simulations (performance: {performance}) for batch {batch_id} ({batch})")
 # We are multi-threading:
 multithread
 # We are using nchunks:
