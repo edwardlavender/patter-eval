@@ -31,7 +31,7 @@ dv::src()
 #### Load data
 # Performance simulations
 sims   <- readRDS(here_input("sims-performance.rds"))
-skills <- readRDS(here_data("sims", "synthesis", "skill.rds"))
+skills <- readRDS(here_output("synthesis", "skill.rds"))
 
 
 #########################
@@ -94,102 +94,124 @@ png_name <- function(name) {
 
 #### Select simulations
 # For specific combination, select two receiver levels, one array/path realisation
+# This choice is informed by examination of the maps below
+# Good examples: 1, 3, 10, 24, 29
 sims_for_maps <-
   sims |>
   filter(n_receiver %in% nr) |>
-  filter(array_realisation == 1L & path_realisation == 1L) |>
+  filter(array_realisation == 1L & path_realisation == 3L) |>
   arrange(n_receiver, arrangement) |>
   as.data.table()
 
-#### Make maps (~37 s)
+#### Make maps (~5 mins)
 if (FALSE) {
 
-  #### Set up plot
-  # The figure will be annotated outside of R
-  # (optional) FLAG: adjust width & number of columns for algorithms
-  dir.create(here_fig("performance"), recursive = TRUE)
-  png(here_fig("performance", png_name("map")),
-      height = 8, width = 12, units = "in", res = 600)
-  pp <- par(mfrow = c(4, 9),
-            oma = c(0, 0, 0, 0), mar = rep(1, 4))
-  pbapply::pblapply(1:4, function(i) {
+  # Create a map for each path_realisation_index
+  tic()
+  lapply(sort(unique(sims$path_realisation)), function(path_realisation_index) {
 
-    #### Read UDs
-    sim        <- sims_for_maps[i, ]
-    # list.files(here_alg(sim), recursive = TRUE)
-    ud_path    <- terra::rast(here_alg(sim, "path", "ud.tif"))
-    ud_coa_1   <- terra::rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
-    ud_coa_2   <- terra::rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
-    ud_rsp_1   <- terra::rast(here_alg(sim, "rsp", "default", "ud.tif"))
-    ud_rsp_2   <- terra::rast(here_alg(sim, "rsp", "custom", "ud.tif"))
-    ud_acpff   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
-    ud_acdcpff <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
-    ud_acpfk   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-    ud_acdcpfk <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
-    ud_acpfs   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
-    ud_acdcpfs <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
-    # Select UDs
-    # * (optional) FLAG: modify UDs included in this list
-    uds <- list(ud_path,
-                ud_coa_1, ud_coa_2,
-                ud_rsp_1, ud_rsp_2,
-                ud_acpff, ud_acdcpff,
-                # ud_acpfk, ud_acdcpfk,
-                ud_acpfs, ud_acdcpfs
-    )
+    #### Define simulations for path_realisation_index
+    sims_for_maps <-
+      sims |>
+      filter(n_receiver %in% nr) |>
+      filter(array_realisation == 1L & path_realisation == path_realisation_index) |>
+      arrange(n_receiver, arrangement) |>
+      as.data.table()
 
-    #### Calculate scaling parameter
-    # We will scale UDs (within rows) to a maximum value of 1 for comparison
-    # Scaling is implemented below to ensure correct HR calculation
-    scale <- sapply(uds, \(ud) terra::global(ud, "max")$max) |> max()
-    # uds   <- lapply(uds, \(ud) ud / scale)
-    # sapply(uds, \(ud) terra::global(ud, "max"))
+    #### Set up plot
+    # The figure will be annotated outside of R
+    # (optional) FLAG: adjust width & number of columns for algorithms
+    here_maps <- function(...) here_fig("performance", "maps", ...)
+    dir.create(here_maps(), recursive = TRUE)
+    png(here_maps(png_name(paste0("map-", path_realisation_index))),
+        height = 8, width = 12, units = "in", res = 600)
+    pp <- par(mfrow = c(4, 9),
+              oma = c(0, 0, 0, 0), mar = rep(1, 4))
+    pbapply::pblapply(1:4, function(i) {
 
-    #### Plot UDs for selected array
-    m <- read_array(sim)
-    lapply(uds, function(ud) {
-      # Plot UD (scaled)
-      rescale <- FALSE
-      if (rescale) {
-        sud <- ud / scale
-        range <- c(0, 1)
-      } else {
-        sud <- ud
-        range <- NULL
-      }
-      spatMap(sud, range = range, legend = FALSE, mar = NA)
-      # (optional) Set speed to TRUE to check plot layout only
-      speed <- FALSE
-      if (speed) {
-        spatAxes(ud)
+      #### Read UDs
+      sim        <- sims_for_maps[i, ]
+      if (all(is.na(sim))) {
         return(NULL)
       }
-      # Add home range (based on unscaled UD)
-      map_hr_home(ud, .add = TRUE,
-                  border = "dimgrey", lwd = 0.75)
-      # Plot UD (scaled)
-      # terra::plot(ud)
-      # Add receivers
-      points(m$receiver_x, m$receiver_y,
-             pch = 21,
-             bg = scales::alpha("black", 0.75),
-             col = scales::alpha("black", 0.75),
-             cex = 0.5)
-      # Add detection range(s)
-      # * We use a scale bar instead
-      if (FALSE) {
-        cbind(m$receiver_x, m$receiver_y) |>
-          terra::vect() |>
-          terra::buffer(width = sim$gamma) |>
-          terra::lines(lwd = 0.5, col = "dimgrey")
+      # list.files(here_alg(sim), recursive = TRUE)
+      ud_path    <- read_rast(here_alg(sim, "path", "ud.tif"))
+      ud_coa_1   <- read_rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
+      ud_coa_2   <- read_rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
+      ud_rsp_1   <- read_rast(here_alg(sim, "rsp", "default", "ud.tif"))
+      ud_rsp_2   <- read_rast(here_alg(sim, "rsp", "custom", "ud.tif"))
+      ud_acpff   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
+      ud_acdcpff <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
+      ud_acpfs   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
+      ud_acdcpfs <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
+      # Select UDs
+      # * (optional) FLAG: modify UDs included in this list
+      uds <- list(ud_path,
+                  ud_coa_1, ud_coa_2,
+                  ud_rsp_1, ud_rsp_2,
+                  ud_acpff, ud_acdcpff,
+                  ud_acpfs, ud_acdcpfs
+      )
+      if (any(sapply(uds, is.null))) {
+        return(NULL)
       }
-      spatAxes(ud)
-      terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
-      NULL
-    }) |> invisible()
 
-  }) |> invisible()
-  dev.off()
+      #### Calculate scaling parameter
+      # We will scale UDs (within rows) to a maximum value of 1 for comparison
+      # Scaling is implemented below to ensure correct HR calculation
+      scale <- sapply(uds, \(ud) terra::global(ud, "max")$max) |> max()
+      # uds   <- lapply(uds, \(ud) ud / scale)
+      # sapply(uds, \(ud) terra::global(ud, "max"))
+
+      #### Plot UDs for selected array
+      m <- read_array(sim)
+      lapply(uds, function(ud) {
+        # Plot UD (scaled)
+        rescale <- FALSE
+        if (rescale) {
+          sud <- ud / scale
+          range <- c(0, 1)
+        } else {
+          sud <- ud
+          range <- NULL
+        }
+        spatMap(sud, range = range, legend = FALSE, mar = NA)
+        # (optional) Set speed to TRUE to check plot layout only
+        speed <- FALSE
+        if (speed) {
+          spatAxes(ud)
+          return(NULL)
+        }
+        # Add home range (based on unscaled UD)
+        map_hr_home(ud, .add = TRUE,
+                    border = "dimgrey", lwd = 0.75)
+        # Plot UD (scaled)
+        # terra::plot(ud)
+        # Add receivers
+        points(m$receiver_x, m$receiver_y,
+               pch = 21,
+               bg = scales::alpha("black", 0.75),
+               col = scales::alpha("black", 0.75),
+               cex = 0.5)
+        # Add detection range(s)
+        # * We use a scale bar instead
+        if (FALSE) {
+          cbind(m$receiver_x, m$receiver_y) |>
+            terra::vect() |>
+            terra::buffer(width = sim$gamma) |>
+            terra::lines(lwd = 0.5, col = "dimgrey")
+        }
+        spatAxes(ud)
+        terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
+        NULL
+      }) |> invisible()
+
+    }) |> invisible()
+    par(pp)
+    dev.off()
+
+  })
+  toc()
 
 }
 
