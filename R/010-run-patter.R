@@ -50,8 +50,8 @@ dv::src()
 #### Load data
 spatw      <- readRDS(here_input("spatw.rds"))
 win        <- qs::qread(here_input("win.qs"))
-sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
-sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
+sims_for_performance <- readRDS(here_input("sims-performance.rds"))
+sims_for_sensitivity <- readRDS(here_input("sims-sensitivity.rds"))
 
 
 #########################
@@ -59,20 +59,32 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### Julia connection
 
 #### Define sims
-# Define sims
-type <- "performance"
-sims <- sims_for_performance
+#
+# Performance simulations:
+# type     <- "performance"
+# sims     <- copy(sims_for_performance)
+# batch    <- 1:nrow(sims)
+# batch_id <- min(batch)
+#
+# Sensitivity simulations:"
+type     <- "sensitivity"
+sims     <- copy(sims_for_sensitivity)
+batch    <- 1:1000L
+batch_id <- min(batch)
+#
+# Cleanup:
+rm(sims_for_performance, sims_for_sensitivity)
+#
 # (optional) Update number of particles
 sims[, n_particles := NULL]
 # sims[, n_particles := 5e4L]
+
 # Visualise n particles
 terra::plot(terra::unwrap(spatw))
 points(terra::spatSample(terra::unwrap(spatw),
                          size = 30000L,
                          xy = TRUE, values = FALSE),
        pch = ".")
-# type <- "sensitivity"
-# sims <- sims_for_sensitivity
 
 #### Define multi-threading option
 # We can multi-thread R or Julia code
@@ -121,7 +133,7 @@ if (FALSE & multithread == "Julia") {
     #### Implement workflow_patter() with `test = TRUE`
     # i <- 1
     message(paste("Test", i))
-    sim  <- sims_for_performance[i, ]
+    sim  <- sims[i, ]
     test <- workflow_patter(sim = sim,
                             spat = terra::unwrap(spatw),
                             win = win,
@@ -249,11 +261,11 @@ if (FALSE && multithread == "Julia") {
 
   #### Define simulation
   # (TO DO) Repeat the code with a few random choices to check result consistency
-  # sim <- sims_for_performance[row == 205, ]
-  # sim <- sims_for_performance[row == 325, ]
-  # sim <- sims_for_performance[row == 47, ]  # 10,000 ok
-  # sim <- sims_for_performance[row == 145, ] # 10,000 ok
-  # sim <- sims_for_performance[row == 349, ] # 10,000 sometimes ok
+  # sim <- sims[row == 205, ]
+  # sim <- sims[row == 325, ]
+  # sim <- sims[row == 47, ]  # 10,000 ok
+  # sim <- sims[row == 145, ] # 10,000 ok
+  # sim <- sims[row == 349, ] # 10,000 sometimes ok
 
   #### Read data
   acoustics  <- read_acoustics(sim); # tmp <- copy(acoustics)
@@ -465,7 +477,7 @@ chunks  <- patter:::cl_chunks(rsockets, nrow(sims))
 nchunks <- length(chunks)
 # Create a log file for each chunk
 lapply(seq_len(nchunks), function(i) {
-  file.create(here_output("log", "patter", type, paste0("log-", i, ".txt")))
+  file.create(here_output("log", "patter", type, paste0(batch_id, "-log-", i, ".txt")))
 }) |> invisible()
 
 #### Initialise cluster
@@ -488,7 +500,7 @@ if (multithread == "Julia") {
     # Spawn a separate Julia process on each core (~3 mins)
     tic()
     cl <- makeCluster(rsockets)
-    ignore <- c("cl", "spatw", "sims_for_performance", "sims_for_performance_ls")
+    ignore <- c("cl", "spatw")
     export <- ls()[!(ls() %in% ignore)]
     clusterExport(cl, export)
     clusterEvalQ(cl, {
@@ -540,7 +552,7 @@ sdt <-
     #### Set up chunk
     # Logs
     # i <- 1
-    log.txt <- here_output("log", "patter", type, paste0("log-", i, ".txt"))
+    log.txt <- here_output("log", "patter", type, paste0(batch_id, "-log-", i, ".txt"))
     cat_log <- patter:::cat_init(.verbose = log.txt)
     # rstudioapi::navigateToFile(log.txt)
     cat_log(paste("CHUNK" , i, "\n"))
@@ -633,26 +645,30 @@ toc()
 sdt <- rbindlist(sdt)
 table(sdt$acpf)
 table(sdt$acdcpf)
-saveRDS(sdt, here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
+saveRDS(sdt, here_data("sims", "output", "success", paste0("patter-", type, "-", batch_id, ".rds")))
 
 #### Quick examination of convergence failures
 # See also patter-debug.R
-# sdt <- readRDS(here_data("sims", "output", "success", paste0("patter-", type, ".rds")))
-sdt[acpf == FALSE, ]
-sdt[acdcpf == FALSE, ]
-sim <- sims[sims$row == 66, ]
-vis_path  <- get_path(sim, readRDS(here_input("paths.rds")), qs::qread(here_input("detections.qs")))
-vis_array <- get_array(sim, readRDS(here_input("arrays.rds")))
-terra::plot(spat)
-spatPoints(vis_path$x, vis_path$y)
-spatPoints(vis_array$receiver_x, vis_array$receiver_y, cex = 2, col = "red")
+# sdt <- readRDS(here_data("sims", "output", "success", paste0("patter-", type, "-", batch_id, ".rds")))
+if (FALSE) {
+
+  sdt[acpf == FALSE, ]
+  sdt[acdcpf == FALSE, ]
+  sim <- sims[sims$row == 66, ]
+  vis_path  <- get_path(sim, readRDS(here_input("paths.rds")), qs::qread(here_input("detections.qs")))
+  vis_array <- get_array(sim, readRDS(here_input("arrays.rds")))
+  terra::plot(spat)
+  spatPoints(vis_path$x, vis_path$y)
+  spatPoints(vis_array$receiver_x, vis_array$receiver_y, cex = 2, col = "red")
+
+}
 
 
 #########################
 #########################
 #### Quick visuals
 
-if (interactive()) {
+if (FALSE && interactive()) {
 
   qplot <- function(file) {
     terra_qplot(file)
@@ -663,7 +679,7 @@ if (interactive()) {
   }
 
   # Define UD paths
-  sim     <- sims_for_performance[1000, ]
+  sim     <- sims[1000, ]
   ud_path <- here_alg(sim, "path", "ud.tif")
   ud_alg  <- c(here_alg(sim, "coa", "30 mins", "ud.tif"),
                here_alg(sim, "coa", "120 mins", "ud.tif"),
