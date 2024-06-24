@@ -72,6 +72,9 @@ sims     <- copy(sims_for_sensitivity)
 batch    <- 1:1000L
 batch_id <- min(batch)
 #
+# Subset sims by batch
+sims <- sims[batch, ]
+#
 # Cleanup:
 rm(sims_for_performance, sims_for_sensitivity)
 #
