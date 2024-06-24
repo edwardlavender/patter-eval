@@ -222,7 +222,8 @@ get_ud_patter <- function(sim,
     t1_pfbs      <- Sys.time()
     out_smo      <- pf_smoother_two_filter(.map = spat,
                                            .mobility = sim$mobility,
-                                           .n_particle = 1000L)
+                                           .n_particle = 1000L,
+                                           .verbose = FALSE)
     t2_pfbs      <- Sys.time()
     pfbs_mins    <- mins(t2_pfbs, t1_pfbs)
     # qs::qsave(out_smo, out_file_smo)
