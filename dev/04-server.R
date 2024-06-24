@@ -31,7 +31,8 @@ library(tictoc)
 dv::src()
 
 #### Load data
-sims <- readRDS(here_input("sims-performance.rds"))
+# sims <- readRDS(here_input("sims-performance.rds"))
+sims <- readRDS(here_input("sims-sensitivity.rds"))
 
 
 #########################
@@ -44,7 +45,8 @@ sims <- readRDS(here_input("sims-performance.rds"))
 #### List patter outputs (~5 s)
 tic()
 # List logs
-logs    <- list.files(here_output("log", "patter", "performance"))
+# logs    <- list.files(here_output("log", "patter", "performance"))
+logs <- list.files(here_output("log", "patter", "sensitivity"))
 head(logs)
 # List outputs
 outputs <- list.files(here_output("run"), recursive = TRUE)
@@ -54,7 +56,8 @@ toc()
 
 #### Compare computed outputs to expected outputs for a selected sims batch
 # This is the set of directories that we expect to contain outputs (see here_alg()):
-batch <- 1:1181
+# batch <- 1:1181L
+batch <- 1:1000L
 sims  <- sims[batch, ]
 # algorithm <- "acpf"
 algorithm   <- "acdcpf"
@@ -105,7 +108,8 @@ expect_true(all(success))
 #### Clean up patter outputs (~5 s)
 tic()
 # Logs
-logs_path <- file.path(here_output("log", "patter", "performance"), logs)
+# logs_path <- file.path(here_output("log", "patter", "performance"), logs)
+logs_path <- file.path(here_output("log", "patter", "sensitivity"), logs)
 expect_true(file.exists(logs_path[1]))
 unlink(logs_path)
 expect_false(file.exists(logs_path[1]))
