@@ -50,8 +50,18 @@ sims_for_performance <-
   mutate(row = row_number()) |>
   as.data.table()
 # Save
-nrow(sims_for_performance) # 599
+nrow(sims_for_performance) # 1181
 saveRDS(sims_for_performance, here_input("sims-performance.rds"))
+
+#### Identify sensitivity simulations
+table(sims$performance)
+sims_for_sensitivity <-
+  sims |>
+  filter(!performance) |>
+  mutate(row = row_number()) |>
+  as.data.table()
+nrow(sims_for_sensitivity)
+saveRDS(sims_for_sensitivity, here_input("sims-sensitivity.rds"))
 
 
 #########################
