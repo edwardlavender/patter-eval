@@ -38,10 +38,10 @@ sims <- readRDS(here_input("sims-sensitivity.rds"))
 
 #########################
 #########################
-#### Management
+#### List files
 
-#### (conditional) Clean up old files on server
-# TO DO
+#### (optional) Clean up old files on server
+# > Implement manually if required, using code below.
 
 #### Define sims
 type     <- "sensitivity"
@@ -88,77 +88,121 @@ expected <- file.path(sims$combination, sims$array_type, sims$array_realisation,
                       "convergence.rds")
 table(expected %in% outputs)
 
-#### (lavended) Post-transfer checks
+
+#########################
+#########################
+#### File transfer
+
+# Here, we transfer files from the server to lavended
+# The mounted folder must have read/write permissions (set on lavended)
+
+if (isFALSE(lavended())) {
+
+  #### Transfer log.txt files
+  # Timings:
+  # * 100 secs (PF-1, batch_id 1, Fritzbox)
+  # Define output directory
+  to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\log\\patter\\sensitivity"
+  expect_true(dir.exists(to_dir))
+  # Transfer files
+  tic()
+  success <-
+    sapply(logs, function(log.txt) {
+
+      # Define file to copy
+      # log.txt <- logs[1]
+      print(log.txt)
+      from <- file.path(here_output("log", "patter", "sensitivity"), log.txt)
+      expect_true(file.exists(from))
+
+      # Define file to create
+      to     <- file.path(to_dir, log.txt)
+
+      # Copy file
+      file.copy(from, to, overwrite = TRUE)
+    })
+  toc()
+  # Validate success
+  success <- unlist(success)
+  table(success)
+  expect_true(all(success))
+
+  #### Transfer success record (sdt) for batch
+  to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\success"
+  expect_true(dir.exists(to_dir))
+  sdtname <- paste0("patter-", type, "-", batch_id, ".rds")
+  success <- file.copy(here_data("sims", "output", "success", sdtname),
+                       file.path(to_dir, sdtname))
+  expect_true(success)
+
+  #### Transfer outputs
+  # Timings:
+  # * 1.98 hours (PF-1, batch_id = 1 (n = 1000), Fritzbox)
+  # Define to directory
+  to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\run"
+  expect_true(dir.exists(to_dir))
+  # Set up cluster
+  cl <- NULL
+  # cl <- parallel::makeCluster(2L)
+  # parallel::clusterExport(cl, "here_output")
+  # Copy files
+  tic()
+  success <-
+    cl_lapply(seq_len(length(outputs)),
+              .cl = cl,
+              .fun = function(i) {
+                print(i)
+                output <- outputs[i]
+                from   <- file.path(here_output("run"), output)
+                expect_true(file.exists(from))
+                to <- file.path(to_dir, output)
+                file.copy(from, to, overwrite = TRUE)
+              })
+  toc()
+  # Validate success
+  success <- unlist(success)
+  table(success)
+  expect_true(all(success))
+
+}
+
+
+#########################
+#########################
+#### (lavended) Post transfer checks
+
 if (lavended()) {
-  # Verify that expected outputs exist
-  expect_true(all(expected %in% outputs))
+
+  #### Check log files
+  # Check listed logs for batch
+  logs[str_detect(logs, paste0(batch_id, "-"))]
+
+  #### Check sdt for batch exists
+  sdtname <- paste0("patter-", type, "-", batch_id, ".rds")
+  here_data("sims", "output", "success", sdtname) |>
+    file.exists() |>
+    expect_true()
+
+  #### Check output files exist
+  # Verify all outputs exist
+  here_output("run", expected) |>
+    file.exists() |>
+    all() |>
+    expect_true()
   # Verify that we can read example SpatRasters
+  # (i.e., files are not corrupt)
   tifs <- outputs[str_detect(outputs, ".tif")]
   int  <- sample.int(length(tifs), size = 10)
   tifs <- lapply(tifs[int], function(f) terra::rast(here_output("run", f)))
   terra::plot(tifs[[1]])
+
 }
 
-#### Transfer log.txt files
-to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\log\\patter\\sensitivity"
-expect_true(dir.exists(to_dir))
-# Transfer files
-tic()
-success <-
-  sapply(logs, function(log.txt) {
 
-    # Define file to copy
-    # log.txt <- logs[1]
-    print(log.txt)
-    from <- file.path(here_output("log", "patter", "sensitivity"), log.txt)
-    expect_true(file.exists(from))
+#########################
+#########################
+#### Clean up
 
-    # Define file to create
-    to     <- file.path(to_dir, log.txt)
-
-    # Copy file
-    file.copy(from, to, overwrite = TRUE)
-  })
-toc()
-# Validate success
-table(success)
-expect_true(all(success))
-
-#### Transfer success record (sdt) for batch
-to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\success"
-expect_true(dir.exists(to_dir))
-sdtname <- paste0("patter-", type, "-", batch_id, ".rds")
-success <- file.copy(here_data("sims", "output", "success", sdtname),
-                     file.path(to_dir, sdtname))
-expect_true(success)
-
-#### Transfer outputs
-# Define to directory
-to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\run"
-expect_true(dir.exists(to_dir))
-# Set up cluster
-cl <- NULL
-# cl <- parallel::makeCluster(2L)
-# parallel::clusterExport(cl, "here_output")
-# Copy files
-tic()
-success <-
-  cl_lapply(seq_len(length(outputs)),
-            .cl = cl,
-            .fun = function(i) {
-              print(i)
-              output <- outputs[i]
-              from   <- file.path(here_output("run"), output)
-              expect_true(file.exists(from))
-              to <- file.path(to_dir, output)
-              file.copy(from, to, overwrite = TRUE)
-            })
-toc()
-# Validate success
-table(success)
-expect_true(all(success))
-
-#### Clean up patter outputs (~5 s)
 # This code is guarded by if(FALSE)
 if (FALSE) {
 
