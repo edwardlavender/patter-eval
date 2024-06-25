@@ -16,8 +16,9 @@
 # * File transfer   : NA
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
-# * 1:1000        : PF-1; {7 hrs}; copied
+# * 1:1000        : PF-1; 7 hrs; copied;
 # * 1001:2000     : PF-2; in progress
+# * 2001:5000     : PF-1; in progress;
 
 
 #########################
@@ -28,7 +29,6 @@
 rm(list = ls())
 try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
-options(error = function(...) beepr::beep(7))
 
 #### Essential packages
 library(dv)

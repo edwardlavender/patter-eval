@@ -17,7 +17,6 @@
 rm(list = ls())
 try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
-options(error = function(...) beepr::beep(7))
 
 #### Essential packages
 library(dv)
