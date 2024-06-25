@@ -42,6 +42,11 @@ sims <- readRDS(here_input("sims-sensitivity.rds"))
 #### (conditional) Clean up old files on server
 # TO DO
 
+#### Define sims
+type     <- "sensitivity"
+batch    <- 1:1000L
+batch_id <- min(batch)
+
 #### List patter outputs (~5 s)
 tic()
 # List logs
@@ -56,8 +61,6 @@ toc()
 
 #### Compare computed outputs to expected outputs for a selected sims batch
 # This is the set of directories that we expect to contain outputs (see here_alg()):
-# batch <- 1:1181L
-batch <- 1:1000L
 sims  <- sims[batch, ]
 # algorithm <- "acpf"
 algorithm   <- "acdcpf"
@@ -81,24 +84,58 @@ expected <- file.path(sims$combination, sims$array_type, sims$array_realisation,
 table(expected %in% outputs)
 
 #### Transfer log.txt files
-# TO DO
+to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\log\\patter\\sensitivity"
+expect_true(dir.exists(to_dir))
+# Transfer files
+tic()
+success <-
+  sapply(logs, function(log.txt) {
+
+    # Define file to copy
+    # log.txt <- logs[1]
+    print(log.txt)
+    from <- file.path(here_output("log", "patter", "sensitivity"), log.txt)
+    expect_true(file.exists(from))
+
+    # Define file to create
+    to     <- file.path(to_dir, log.txt)
+
+    # Copy file
+    file.copy(from, to, overwrite = TRUE)
+  })
+toc()
+# Validate success
+table(success)
+expect_true(all(success))
 
 #### Transfer success record (sdt) for batch
-# TO DO
+to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\success"
+expect_true(dir.exists(to_dir))
+sdtname <- paste0("patter-", type, "-", batch_id, ".rds")
+success <- file.copy(here_data("sims", "output", "success", sdtname),
+                     file.path(to_dir, sdtname))
+expect_true(success)
 
 #### Transfer outputs
+# Define to directory
+to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\run"
+expect_true(dir.exists(to_dir))
 # Set up cluster
-cl <- parallel::makeCluster(2L)
-parallel::clusterExport(cl, "here_output")
+cl <- NULL
+# cl <- parallel::makeCluster(2L)
+# parallel::clusterExport(cl, "here_output")
 # Copy files
 tic()
 success <-
-  cl_lapply(outputs,
+  cl_lapply(seq_len(length(outputs)),
             .cl = cl,
-            .fun = function(output) {
-              file.copy(file.path(here_output("run"), output),
-                        file.path("\\tsclient\patter-eval\data\sims\output\run", output),
-                        overwrite = TRUE)
+            .fun = function(i) {
+              print(i)
+              output <- outputs[i]
+              from   <- file.path(here_output("run"), output)
+              expect_true(file.exists(from))
+              to <- file.path(to_dir, output)
+              file.copy(from, to, overwrite = TRUE)
             })
 toc()
 # Validate success
