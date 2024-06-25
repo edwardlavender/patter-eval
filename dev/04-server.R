@@ -61,6 +61,10 @@ head(outputs)
 toc()
 
 #### Compare computed outputs to expected outputs for a selected sims batch
+# Run this code:
+# * Before file transfer (on server);
+# * After file transfer (on local machine);
+# * Then it is safe to delete files on the server
 # This is the set of directories that we expect to contain outputs (see here_alg()):
 sims  <- sims[batch, ]
 # algorithm <- "acpf"

@@ -16,12 +16,8 @@
 # * File transfer   : NA
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
-# * 1:5000        : {machine}; {time}; {copied}
-# * 5001:10000    :
-# * 10001:15000   :
-# * 15000:20000   :
-# * 20001:25000   :
-# * 25000:end     :
+# * 1:1000        : PF-1; {7 hrs}; copied
+# * 1001:2000     : PF-2; in progress
 
 
 #########################
