@@ -88,6 +88,17 @@ expected <- file.path(sims$combination, sims$array_type, sims$array_realisation,
                       "convergence.rds")
 table(expected %in% outputs)
 
+#### (lavended) Post-transfer checks
+if (lavended()) {
+  # Verify that expected outputs exist
+  expect_true(all(expected %in% outputs))
+  # Verify that we can read example SpatRasters
+  tifs <- outputs[str_detect(outputs, ".tif")]
+  int  <- sample.int(length(tifs), size = 10)
+  tifs <- lapply(tifs[int], function(f) terra::rast(here_output("run", f)))
+  terra::plot(tifs[[1]])
+}
+
 #### Transfer log.txt files
 to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\log\\patter\\sensitivity"
 expect_true(dir.exists(to_dir))
@@ -148,19 +159,24 @@ table(success)
 expect_true(all(success))
 
 #### Clean up patter outputs (~5 s)
-tic()
-# Logs
-# logs_path <- file.path(here_output("log", "patter", "performance"), logs)
-logs_path <- file.path(here_output("log", "patter", "sensitivity"), logs)
-expect_true(file.exists(logs_path[1]))
-unlink(logs_path)
-expect_false(file.exists(logs_path[1]))
-# Outputs
-outputs_path <- file.path(here_output("run"), outputs)
-expect_true(file.exists(outputs_path[1]))
-unlink(outputs_path)
-expect_false(file.exists(outputs_path[1]))
-toc()
+# This code is guarded by if(FALSE)
+if (FALSE) {
+
+  tic()
+  # Logs
+  # logs_path <- file.path(here_output("log", "patter", "performance"), logs)
+  logs_path <- file.path(here_output("log", "patter", "sensitivity"), logs)
+  expect_true(file.exists(logs_path[1]))
+  unlink(logs_path)
+  expect_false(file.exists(logs_path[1]))
+  # Outputs
+  outputs_path <- file.path(here_output("run"), outputs)
+  expect_true(file.exists(outputs_path[1]))
+  unlink(outputs_path)
+  expect_false(file.exists(outputs_path[1]))
+  toc()
+
+}
 
 
 #### End of code.
