@@ -23,6 +23,7 @@ dv::clear()
 
 #### Essential packages
 library(collapse)
+library(dv)
 library(data.table)
 library(patter)
 library(stringr)
