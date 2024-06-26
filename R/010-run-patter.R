@@ -517,9 +517,13 @@ if (multithread == "Julia") {
       names(export_ls) <- export
       sapply(export_ls, lobstr::obj_size) |> sort()
     }
-    clusterExport(cl, c("type", "batch_id", "sims", "chunks", "win", "performance"))
+    clusterExport(cl, c(
+      # items for clusterEvalQ
+      "multithread", "ModelObsAcousticContainer", "ModelObsAcousticContainer.logpdf_obs",
+      # Items for simulation
+      "type", "batch_id", "sims", "chunks", "win", "performance"))
 
-    # clusterEval (libraries, packages & Julia set up)
+    # clusterEvalQ (libraries, packages & Julia set up)
     clusterEvalQ(cl, {
 
       # Load packages on each core
@@ -530,7 +534,6 @@ if (multithread == "Julia") {
       library(dtplyr)
       library(dplyr, warn.conflicts = FALSE)
       library(tictoc)
-      dv::src()
 
       # Each core uses single threaded DT and Julia implementations
       setDTthreads(threads = 1)
