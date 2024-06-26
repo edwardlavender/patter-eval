@@ -70,7 +70,7 @@ performance <- ifelse(type == "performance", TRUE, FALSE)
 #
 # Sensitivity simulations:"
 sims     <- copy(sims_for_sensitivity)
-batch    <- 1:1000L
+batch    <- 1:10L
 #
 # Subset sims by batch & define batch_id
 sims     <- sims[batch, ]
@@ -505,23 +505,22 @@ if (multithread == "Julia") {
 
     tic()
 
+    # Initialise Julia outside of the cluster (see src/julia.R)
+    julia_connect(.threads = 1L)
+
     # Make cluster
     cl <- makeCluster(rsockets)
 
     # clusterExport (data & parameters)
-    if (FALSE) {
-      items <- ls()
-      ignore <- c("op", "cl", "spatw")
-      export <- items[!(items %in% ignore)]
-      export_ls <- as.list(export)
-      names(export_ls) <- export
-      sapply(export_ls, lobstr::obj_size) |> sort()
-    }
-    clusterExport(cl, c(
-      # items for clusterEvalQ
-      "multithread", "ModelObsAcousticContainer", "ModelObsAcousticContainer.logpdf_obs",
-      # Items for simulation
-      "type", "batch_id", "sims", "chunks", "win", "performance"))
+    export <- c(
+        # items for clusterEvalQ
+        "multithread", "ModelObsAcousticContainer", "ModelObsAcousticContainer.logpdf_obs",
+        # Items for simulation
+        "type", "batch_id", "sims", "chunks", "win", "performance")
+    # export_ls <- as.list(export)
+    # names(export_ls) <- export
+    # sapply(export_ls, lobstr::obj_size) |> sort()
+    clusterExport(cl, export)
 
     # clusterEvalQ (libraries, packages & Julia set up)
     clusterEvalQ(cl, {
@@ -538,10 +537,11 @@ if (multithread == "Julia") {
 
       # Each core uses single threaded DT and Julia implementations
       setDTthreads(threads = 1)
-      julia_connect(.threads = 1)
+      try_julia_connect()
       check_multithreading(multithread)
 
       # Set Julia objects on each core
+      JuliaCall:::.julia$cmd("using RCall")
       JuliaCall::julia_command(ModelObsAcousticContainer)
       JuliaCall::julia_command(ModelObsAcousticContainer.logpdf_obs)
       set_map(terra::rast(here_data("sims", "input", "spat.tif")))
