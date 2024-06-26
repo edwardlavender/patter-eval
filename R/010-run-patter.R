@@ -511,7 +511,7 @@ if (multithread == "Julia") {
     # List items for export (& check sizes)
     items <- ls()
     ignore <- c("op", "cl", "spatw")
-    export <- items[!(ls() %in% ignore)]
+    export <- items[!(items %in% ignore)]
     export_ls <- as.list(export)
     names(export_ls) <- export
     sapply(export_ls, lobstr::obj_size) |> sort()
