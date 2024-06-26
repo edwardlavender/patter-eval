@@ -508,16 +508,18 @@ if (multithread == "Julia") {
     # Make cluster
     cl <- makeCluster(rsockets)
 
-    # List items for export (& check sizes)
-    items <- ls()
-    ignore <- c("op", "cl", "spatw")
-    export <- items[!(items %in% ignore)]
-    export_ls <- as.list(export)
-    names(export_ls) <- export
-    sapply(export_ls, lobstr::obj_size) |> sort()
+    # clusterExport (data & parameters)
+    if (FALSE) {
+      items <- ls()
+      ignore <- c("op", "cl", "spatw")
+      export <- items[!(items %in% ignore)]
+      export_ls <- as.list(export)
+      names(export_ls) <- export
+      sapply(export_ls, lobstr::obj_size) |> sort()
+    }
+    clusterExport(cl, c("type", "batch_id", "sims", "chunks", "win", "performance"))
 
-    # Set up clusters
-    clusterExport(cl, export)
+    # clusterEval (libraries, packages & Julia set up)
     clusterEvalQ(cl, {
 
       # Load packages on each core
@@ -528,6 +530,7 @@ if (multithread == "Julia") {
       library(dtplyr)
       library(dplyr, warn.conflicts = FALSE)
       library(tictoc)
+      dv::src()
 
       # Each core uses single threaded DT and Julia implementations
       setDTthreads(threads = 1)
