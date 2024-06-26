@@ -17,8 +17,10 @@
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
 # * 1:1000        : PF-1; 7 hrs; copied;
-# * 1001:2000     : PF-2; in progress
+# * 1001:2000     : PF-2; 32 hours; NOT COPIED
 # * 2001:5000     : PF-1; in progress;
+# * 5001:10000    : PF-3: in progress;
+# * 10001:15000   : PF-2: TO DO
 
 
 #########################
@@ -44,6 +46,7 @@ library(tictoc)
 dv::src()
 
 #### Load data
+Sys.time()
 spatw      <- readRDS(here_input("spatw.rds"))
 win        <- qs::qread(here_input("win.qs"))
 sims_for_performance <- readRDS(here_input("sims-performance.rds"))
@@ -552,6 +555,7 @@ here_alg(sims[1, ], "patter", "acpf", sims$alg_par[1])
 
 #### Estimate UDs
 gc()
+Sys.time()
 tic()
 sdt <-
   pbapply::pblapply(seq_len(nchunks), cl = cl, function(i) {
@@ -595,6 +599,7 @@ sdt <-
 
   })
 toc()
+Sys.time()
 
 #### Record success (200 trials):
 #
