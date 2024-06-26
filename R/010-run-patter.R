@@ -543,7 +543,7 @@ if (multithread == "Julia") {
       # Set Julia objects on each core
       JuliaCall::julia_command(ModelObsAcousticContainer)
       JuliaCall::julia_command(ModelObsAcousticContainer.logpdf_obs)
-      set_map(terra::rast(here_input("spat.tif")))
+      set_map(terra::rast(here_data("sims", "input", "spat.tif")))
       set_seed()
 
       # Check memory used (101082480 bytes: ~100 MB)
