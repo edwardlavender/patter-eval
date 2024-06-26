@@ -19,8 +19,8 @@
 # * 1:1000        : PF-1; 7 hrs; copied;
 # * 1001:2000     : PF-2; 32 hours; copied;
 # * 2001:5000     : PF-1; in progress (working);
-# * 5001:10000    : PF-3: in progress (to check if working);
-# * 10001:15000   : PF-2: TO DO (to confirm working);
+# * 5001:10000    : PF-3: in progress (RETRYING, TO CHECK);
+# * 10001:15000   : PF-2: TO DO (RETRYING, TO CHECK);
 
 
 #########################
@@ -500,13 +500,23 @@ if (multithread == "Julia") {
     cl <- rsockets
     stop("The fork cluster crashes R.")
 
+  # Spawn a separate Julia process on each core (~3 mins)
   } else if (cluster == "socket") {
 
-    # Spawn a separate Julia process on each core (~3 mins)
     tic()
+
+    # Make cluster
     cl <- makeCluster(rsockets)
-    ignore <- c("cl", "spatw")
-    export <- ls()[!(ls() %in% ignore)]
+
+    # List items for export (& check sizes)
+    items <- ls()
+    ignore <- c("op", "cl", "spatw")
+    export <- items[!(ls() %in% ignore)]
+    export_ls <- as.list(export)
+    names(export_ls) <- export
+    sapply(export_ls, lobstr::obj_size) |> sort()
+
+    # Set up clusters
     clusterExport(cl, export)
     clusterEvalQ(cl, {
 
@@ -527,10 +537,15 @@ if (multithread == "Julia") {
       # Set Julia objects on each core
       JuliaCall::julia_command(ModelObsAcousticContainer)
       JuliaCall::julia_command(ModelObsAcousticContainer.logpdf_obs)
-      spatw <- readRDS(here_input("spatw.rds"))
-      set_map(terra::unwrap(spatw))
+      set_map(terra::unwrap(readRDS(here_input("spatw.rds"))))
       set_seed()
+
+      # Check memory used (101082480 bytes: ~100 MB)
+      # stop(lobstr::mem_used())
+
+      NULL
     })
+
     toc()
 
   }
