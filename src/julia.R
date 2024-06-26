@@ -17,13 +17,22 @@
 # See also: https://github.com/Non-Contradiction/JuliaCall/issues/120
 
 try_julia_connect <- function() {
-  attempt <- 1
-  while (attempt < 10L) {
+  attempt <- 1L
+  n_trial <- 10L
+  # Iteratively attempt to connect to Julia
+  # (Julia may be locked by another process)
+  while (attempt <= n_trial) {
     connection <- tryCatch(patter::julia_connect(.threads = 1L),
                            error = function(e) e)
     if (inherits(connection, "error")) {
-      attempt <- attempt + 1
-      Sys.sleep(60)
+      if (attempt == n_trial) {
+        stop(paste("`julia_connect()` failed after multiple attempts with the following error message: \n\n",
+                   connection$message), call. = FALSE)
+      }
+      attempt <- attempt + 1L
+      warning(paste("`julia_connect()` failed on ", attempt, " / ", n_trial, ". Retrying after 30 s..."),
+              immediate. = TRUE)
+      Sys.sleep(30)
     } else {
       attempt <- Inf
     }
