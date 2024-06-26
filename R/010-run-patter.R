@@ -534,6 +534,7 @@ if (multithread == "Julia") {
       library(dtplyr)
       library(dplyr, warn.conflicts = FALSE)
       library(tictoc)
+      dv::src()
 
       # Each core uses single threaded DT and Julia implementations
       setDTthreads(threads = 1)
