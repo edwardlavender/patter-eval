@@ -17,10 +17,10 @@
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
 # * 1:1000        : PF-1; 7 hrs; copied;
-# * 1001:2000     : PF-2; 32 hours; NOT COPIED
-# * 2001:5000     : PF-1; in progress;
-# * 5001:10000    : PF-3: in progress;
-# * 10001:15000   : PF-2: TO DO
+# * 1001:2000     : PF-2; 32 hours; copied;
+# * 2001:5000     : PF-1; in progress (working);
+# * 5001:10000    : PF-3: in progress (to check if working);
+# * 10001:15000   : PF-2: TO DO (to confirm working);
 
 
 #########################
