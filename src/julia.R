@@ -2,12 +2,16 @@
 
 # Running Julia in parallel on a socket cluster is tricky:
 # * In Julia, precompile all Julia dependencies (used by JuliaCall, Patter.jl, patter)
-# - This is implemented as precompilation in Julia happens in parallel which may interfere with the R process
+# -- This is implemented as precompilation in Julia happens in parallel which may interfere with the R process
+# -- See GitHub thread below
 # * Run example pf_filter() code normally (in case additional R setup is necessary)
 # * Run RStudio/R as an administrator
 # * Use julia_connect() before parallelisation
-# * Use try_julia_connect() to connect to Julia in clusterEvalQ (incl. a retry mechanism)
+# -- See GitHub thread below
+# * Use try_julia_connect() to connect to Julia in clusterEvalQ
+# - (This includes a retry mechanism if the Julia process is locked)
 # * Use JuliaCall:::.julia$cmd("using RCall") to set RCall
+# -- See GitHub thread below
 # * (optional) Try moving julia_connect() within the parallel code
 
 # See also: https://github.com/Non-Contradiction/JuliaCall/issues/120
