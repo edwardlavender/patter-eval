@@ -45,7 +45,7 @@ sims <- readRDS(here_input("sims-sensitivity.rds"))
 
 #### Define sims
 type     <- "sensitivity"
-batch    <- 1:1000L
+batch    <- 1001:2000L
 batch_id <- min(batch)
 
 #### List patter outputs (~5 s)
@@ -58,6 +58,7 @@ head(logs)
 outputs <- list.files(here_output("run"), recursive = TRUE)
 outputs <- outputs[str_detect(outputs, "patter")]
 head(outputs)
+length(outputs) # 20350
 toc()
 
 #### Compare computed outputs to expected outputs for a selected sims batch
@@ -137,24 +138,28 @@ if (isFALSE(lavended())) {
 
   #### Transfer outputs
   # Timings:
-  # * 1.98 hours (PF-1, batch_id = 1 (n = 1000), Fritzbox)
+  # * batch_id 1 (n = 1000, PF-1, Friztbox, 1 CPU)    : 1.98 hours
+  # * batch_id 1001 (n = 1000, PF-2, Fritzbox, 14 CPU): 9.5 mins
+  # * TO DO (remaining batches)
   # Define to directory
   to_dir <- "\\\\tsclient\\patter-eval\\data\\sims\\output\\run"
   expect_true(dir.exists(to_dir))
   # Set up cluster
-  cl <- NULL
-  # cl <- parallel::makeCluster(2L)
-  # parallel::clusterExport(cl, "here_output")
+  # cl <- NULL
+  cl <- parallel::makeCluster(14L)
+  parallel::clusterExport(cl, c("outputs", "here_output", "to_dir"))
   # Copy files
   tic()
   success <-
     cl_lapply(seq_len(length(outputs)),
               .cl = cl,
               .fun = function(i) {
-                print(i)
+                # print(i)
                 output <- outputs[i]
                 from   <- file.path(here_output("run"), output)
-                expect_true(file.exists(from))
+                if (i == 1L) {
+                  testthat::expect_true(file.exists(from))
+                }
                 to <- file.path(to_dir, output)
                 file.copy(from, to, overwrite = TRUE)
               })
