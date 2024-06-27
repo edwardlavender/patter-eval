@@ -20,7 +20,7 @@
 # * 1001:2000     : PF-2; 32 hours; copied;
 # * 2001:5000     : PF-1; in progress (working);
 # * 5001:10000    : PF-3: in progress (RETRYING, TO CHECK);
-# * 10001:15000   : PF-2: TO DO (RETRYING, TO CHECK);
+# * 10001:15000   : PF-2: in progress (RETRYING, TO CHECK);
 
 
 #########################
@@ -484,6 +484,8 @@ nchunks <- length(chunks)
 lapply(seq_len(nchunks), function(i) {
   file.create(here_output("log", "patter", type, paste0(batch_id, "-log-", i, ".txt")))
 }) |> invisible()
+# Error logs
+dir.create(here_output("error"))
 
 #### Initialise cluster
 # We use a socket cluster, as the fork cluster crashes R
@@ -602,9 +604,17 @@ sdt <-
         # sim = sims_for_chunk[1, ]; spat = terra::unwrap(spatw)
         cat_log(paste0("\n", sim$row, ":\n"))
         t1 <- Sys.time()
-        s <- workflow_patter(sim = sim,
-                             spat = spat, win = win,
-                             performance = performance)
+        s <- tryCatch({
+          workflow_patter(sim = sim,
+                          spat = spat, win = win,
+                          performance = performance)
+        },
+          error = function(e) e)
+        if (inherits(s, "error")) {
+          error <- list(sim = sim, message = s$message)
+          saveRDS(error, here_output("error", paste0(sim$row, ".rds")))
+          s <- data.table(row = sim$row, acpf = NA, acdcpf = NA)
+        }
         t2 <- Sys.time()
         difftime(t2, t1, units = "secs")
         cat_log(as.numeric(round(difftime(t2, t1, units = "secs"), 2)))
