@@ -47,48 +47,70 @@ dv::src()
 
 #### Load data
 Sys.time()
-spatw      <- readRDS(here_input("spatw.rds"))
-win        <- qs::qread(here_input("win.qs"))
+spatw <- readRDS(here_input("spatw.rds"))
+win   <- qs::qread(here_input("win.qs"))
 sims_for_performance <- readRDS(here_input("sims-performance.rds"))
 sims_for_sensitivity <- readRDS(here_input("sims-sensitivity.rds"))
 
 
 #########################
 #########################
-#### Julia connection
+#### Define simulations
 
-#### Define sims
-#
-# Define type
+#### Define simulation type (performance, sensitivity)
 # type      <- "performance"
 type        <- "sensitivity"
 performance <- ifelse(type == "performance", TRUE, FALSE)
-#
-# Performance simulations:
-# sims     <- copy(sims_for_performance)
-# batch    <- 1:nrow(sims)
-#
-# Sensitivity simulations:"
-sims     <- copy(sims_for_sensitivity)
-batch    <- 1:10L
-#
-# Subset sims by batch & define batch_id
-sims     <- sims[batch, ]
-batch_id <- min(batch)
-#
-# Cleanup:
+
+#### Define sims data.table
+if (type == "performance") {
+
+  sims  <- copy(sims_for_performance)
+  batch <- 1:nrow(sims)
+
+} else if (type == "sensitivity") {
+
+  # Define sensitivity simulations
+  sims <- copy(sims_for_sensitivity)
+
+  # Focus on a minimal set of sensitivity simulations (for speed)
+  sort(unique(sims$system_type))
+  sort(unique(sims$n_receiver))
+  sims <-
+    sims |>
+    lazy_dt() |>
+    filter(system_type == 1L) |>
+    filter(n_receiver %in% c(20, 40, 60, 80, 100)) |>
+    as.data.table()
+  nrow(sims)
+
+  # Subset sims by batch & define batch_id
+  batch    <- 1:3000L
+  # batch    <- 3001:5000L
+  # batch    <- 5001:nrow(sims)
+  batch_id <- min(batch)
+  sims     <- sims[batch, ]
+  sims     <- do_sims(sims)
+
+}
 rm(sims_for_performance, sims_for_sensitivity)
-#
-# (optional) Update number of particles
+
+#### (optional) Update number of particles
 sims[, n_particles := NULL]
 # sims[, n_particles := 5e4L]
+if (FALSE) {
+  # Visualise n particles
+  terra::plot(terra::unwrap(spatw))
+  points(terra::spatSample(terra::unwrap(spatw),
+                           size = 30000L,
+                           xy = TRUE, values = FALSE),
+         pch = ".")
+}
 
-# Visualise n particles
-terra::plot(terra::unwrap(spatw))
-points(terra::spatSample(terra::unwrap(spatw),
-                         size = 30000L,
-                         xy = TRUE, values = FALSE),
-       pch = ".")
+
+#########################
+#########################
+#### Julia connection
 
 #### Define multi-threading option
 # We can multi-thread R or Julia code
