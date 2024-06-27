@@ -16,11 +16,12 @@
 # * File transfer   : NA
 # Sensitivity simulations
 # * Batch size: 5000 simulations (5000 * 3 * 1.8 / 1e3 MB = 27 GB)
-# * 1:1000        : PF-1; 7 hrs; copied;
-# * 1001:2000     : PF-2; 32 hours; copied;
-# * 2001:5000     : PF-1; in progress (working);
-# * 5001:10000    : PF-3: in progress (RETRYING, TO CHECK);
-# * 10001:15000   : PF-2: in progress (RETRYING, TO CHECK);
+# * 1:1000        : PF-1; 7 hrs; copied; full dataset
+# * 1001:2000     : PF-2; 32 hours; copied; full dataset
+# * 2001:5000     : PF-1; aborted; full dataset;
+# * 5001:10000    : PF-3: aborted; full dataset
+# * 10001:15000   : PF-2: aborted; full dataset
+# * 1:3000        : PF-1; restarted; minimal dataset (1763 sims);
 
 
 #########################
@@ -65,8 +66,9 @@ performance <- ifelse(type == "performance", TRUE, FALSE)
 #### Define sims data.table
 if (type == "performance") {
 
-  sims  <- copy(sims_for_performance)
-  batch <- 1:nrow(sims)
+  sims     <- copy(sims_for_performance)
+  batch    <- 1:nrow(sims)
+  batch_id <- 1L
 
 } else if (type == "sensitivity") {
 
