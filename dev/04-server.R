@@ -48,6 +48,11 @@ type     <- "sensitivity"
 batch    <- 1001:2000L
 batch_id <- min(batch)
 
+#### Check for errors
+dir_error <- here_output("error")
+expect_true(dir.exists(dir_error))
+list.files(dir_error, full.names = TRUE)
+
 #### List patter outputs (~5 s)
 tic()
 # List logs
