@@ -63,6 +63,18 @@ sims_for_sensitivity <-
 nrow(sims_for_sensitivity)
 saveRDS(sims_for_sensitivity, here_input("sims-sensitivity.rds"))
 
+#### Define a minimal set of sensitivity sims for speed
+sort(unique(sims_for_sensitivity$system_type))
+sort(unique(sims_for_sensitivity$n_receiver))
+sims_for_sensitivity <-
+  sims_for_sensitivity |>
+  lazy_dt() |>
+  filter(system_type == 1L) |>
+  filter(n_receiver %in% c(20, 40, 60, 80, 100)) |>
+  as.data.table()
+nrow(sims_for_sensitivity)
+saveRDS(sims_for_sensitivity, here_input("sims-sensitivity-minimal.rds"))
+
 
 #########################
 #########################

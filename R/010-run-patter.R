@@ -46,7 +46,8 @@ Sys.time()
 spatw <- readRDS(here_input("spatw.rds"))
 win   <- qs::qread(here_input("win.qs"))
 sims_for_performance <- readRDS(here_input("sims-performance.rds"))
-sims_for_sensitivity <- readRDS(here_input("sims-sensitivity.rds"))
+sims_for_sensitivity <- readRDS(here_input("sims-sensitivity-minimal.rds"))
+# sims_for_sensitivity <- readRDS(here_input("sims-sensitivity.rds"))
 
 
 #########################
@@ -69,17 +70,6 @@ if (type == "performance") {
 
   # Define sensitivity simulations
   sims <- copy(sims_for_sensitivity)
-
-  # Focus on a minimal set of sensitivity simulations (for speed)
-  sort(unique(sims$system_type))
-  sort(unique(sims$n_receiver))
-  sims <-
-    sims |>
-    lazy_dt() |>
-    filter(system_type == 1L) |>
-    filter(n_receiver %in% c(20, 40, 60, 80, 100)) |>
-    as.data.table()
-  nrow(sims)
 
   # Subset sims by batch & define batch_id
   batch    <- 1:3000L
