@@ -274,6 +274,7 @@ get_ud_patter <- function(sim,
     #### Outputs
     time <- data.table(id = sim$id,
                        pff = pff_mins,
+                       pfb = pfb_mins,
                        pfbs = pfbs_mins,
                        udf = udf_mins,
                        uds = uds_mins)
