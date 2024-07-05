@@ -63,7 +63,8 @@ head(logs)
 outputs <- list.files(here_output("run"), recursive = TRUE)
 outputs <- outputs[str_detect(outputs, "patter")]
 head(outputs)
-length(outputs) # 20350
+length(outputs)
+# 20350, 37545, 41563, 50568, 62338
 toc()
 
 #### Compare computed outputs to expected outputs for a selected sims batch
@@ -214,7 +215,7 @@ if (lavended()) {
 #### Clean up
 
 # This code is guarded by if(FALSE)
-if (FALSE) {
+if (!lavended() & FALSE) {
 
   tic()
   # Logs
