@@ -210,6 +210,7 @@ if (FALSE) {
 
 }
 
+sims[, arrangement := factor(arrangement, levels = c("random", "regular"))]
 sims[, algorithm := factor(algorithm, levels = c("ACPF", "ACDCPF"))]
 
 #########################
@@ -346,8 +347,9 @@ convergence <-
   summarise(failure = length(which(convergence == FALSE)) / n()) |>
   mutate(algorithm = factor(algorithm, levels = c("ACPF", "ACDCPF")),
          arrangement = factor(arrangement, levels = c("random", "regular")),
-         parameter = factor(parameter, levels = selected_pars),
-         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE)
+         parameter = factor(parameter, levels = c("alpha", "beta", "gamma", "shape", "scale", "mobility")),
+         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE),
+         group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
          ) |>
   as.data.table()
 
@@ -363,7 +365,8 @@ ggplot(convergence) +
   # scale_y_continuous(expand = c(0, 0)) +
   theme_bw() +
   theme(panel.grid.major.x = element_blank(),
-        panel.grid.minor.y = element_blank())
+        panel.grid.minor.y = element_blank(),
+        strip.text = element_text(face = "bold"))
 dev.off()
 
 #### Results
@@ -523,12 +526,16 @@ if (metric == "path") {
              parameter, algorithm) |>
     mutate(error = error / error[performance == TRUE]) |>
     ungroup() |>
+    mutate(group = interaction(arrangement, n_receiver, lex.order = TRUE),
+           group = factor(group, levels = levels(group), labels = 1:length(levels(group)))) |>
     filter(!is.na(error)) |>
     as.data.table()
 }
 
 #### Create boxplots
-cl_lapply(selected_pars, function(parameter_name) {
+# ylim <- range(boxsims$error)
+ylim <- c(NA, NA)
+cl_lapply(selected_pars, .cl = length(selected_pars), .fun = function(parameter_name) {
 
   # parameter_name <- "alpha"
   print(parameter_name)
@@ -542,9 +549,13 @@ cl_lapply(selected_pars, function(parameter_name) {
     ggplot() +
     geom_boxplot(aes(x = factor(degree), y = error, fill = algorithm),
                  varwidth = TRUE) +
+    # ylim(ylim) +
     # scale_y_continuous(labels = sci_notation) +
-    facet_wrap(~n_receiver + arrangement, ncol = 2) +
-    theme_bw()
+    # facet_wrap(~n_receiver + arrangement, ncol = 2) +
+    xlab("") + ylab("") +
+    facet_wrap(~group, ncol = 2) +
+    theme_bw() +
+    theme(strip.text = element_text(face = "bold"))
 
   print(p)
 
