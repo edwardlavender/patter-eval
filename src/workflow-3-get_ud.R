@@ -183,15 +183,21 @@ get_ud_patter <- function(sim,
 
   #### Forward filter implementation
   # out_file_pff <- here_alg(sim, "patter", algorithm, sim$alg_par, "out_pff.qs")
-  t1_pff       <- Sys.time()
-  out_pff      <- do.call(pf_filter, args, quote = TRUE)
-  t2_pff       <- Sys.time()
-  pff_mins     <- mins(t2_pff, t1_pff)
-  # qs::qsave(out_pff, out_file_pff)
-  if (!out_pff$convergence) {
+  t1_pff   <- Sys.time()
+  out_pff  <- tryCatch(do.call(pf_filter, args, quote = TRUE),
+                       error = function(e) e)
+  t2_pff   <- Sys.time()
+  pff_mins <- mins(t2_pff, t1_pff)
+  error    <- inherits(out_pff, "error")
+  if (error || !out_pff$convergence) {
+    if (error) {
+      error <- list(sim = sim, message = out_pff$message)
+      saveRDS(error, here_output("error", paste0(sim$row, "-", algorithm, ".rds")))
+    }
     saveRDS(FALSE, out_file_convergence)
     return(FALSE)
   }
+  # qs::qsave(out_pff, out_file_pff)
 
   #### Backward filter arguments
   args <- assemble_args(sim = sim, args = args,
@@ -204,12 +210,17 @@ get_ud_patter <- function(sim,
   out_pfb         <- do.call(pf_filter, args, quote = TRUE)
   t2_pfb          <- Sys.time()
   pfb_mins        <- mins(t2_pfb, t1_pfb)
-  if (!out_pfb$convergence) {
+  error           <- inherits(out_pfb, "error")
+  if (error || !out_pfb$convergence) {
+    if (error) {
+      error <- list(sim = sim, message = out_pfb$message)
+      saveRDS(error, here_output("error", paste0(sim$row, "-", algorithm, ".rds")))
+    }
     saveRDS(FALSE, out_file_convergence)
     return(FALSE)
   }
-  # qs::qsave(out_pfb, out_file_pfb)
   saveRDS(TRUE, out_file_convergence)
+  # qs::qsave(out_pfb, out_file_pfb)
 
   #### Mapping
   # This code does not need to be run if we just want to check convergence
