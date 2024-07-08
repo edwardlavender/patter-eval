@@ -72,12 +72,27 @@ if (type == "performance") {
   sims <- copy(sims_for_sensitivity)
 
   # Subset sims by batch & define batch_id
-  batch    <- 1:3000L
+  # batch    <- 1:3000L
   # batch    <- 3001:5000L
   # batch    <- 5001:nrow(sims)
+  # batch_id <- min(batch)
+  # sims     <- sims[batch, ]
+  # sims     <- do_sims(sims)
+
+  # Re-implement sims with correct movement parameters
+  # (incorrect detection Pr parameters)
+  sims <-
+    sims |>
+    filter(shape == 1 & scale == 250 & mobility == 500) |>
+    as.data.table()
+
+  nrow(sims)
+
+  # Choose batch
+  batch    <- 1:1300L
+  # batch    <- 1301:2600L
+  # batch    <- 2601:3600L
   batch_id <- min(batch)
-  sims     <- sims[batch, ]
-  sims     <- do_sims(sims)
 
 }
 rm(sims_for_performance, sims_for_sensitivity)
