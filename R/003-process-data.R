@@ -138,9 +138,7 @@ pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
                        sim$array_type, sim$array_realisation,
                        sim$path_realisation)
   dir.create(folder, recursive = TRUE)
-  # `acc` contains modified detection probability parameters from sim
   acc <- get_acoustics(sim, acoustics)
-  # `det` is used for RSP & contains true detection probability parameters
   det <- get_detections(sim, detections)
   qs::qsave(acc, file.path(folder, "acoustics.qs"))
   qs::qsave(det, file.path(folder, "detections.qs"))

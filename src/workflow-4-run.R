@@ -48,7 +48,9 @@ workflow_patter <- function(sim, spat, win, performance = TRUE, test = FALSE) {
   timeline   <- seq(t1, tT, by = "2 mins")
 
   # Observation model
-  # * Observation model parameters are baked into acoustics and archival
+  acoustics[, receiver_alpha := sim$alpha]
+  acoustics[, receiver_beta := sim$beta]
+  acoustics[, receiver_gamma := sim$gamma]
   stopifnot(acoustics$receiver_alpha[1] == sim$alpha &
               acoustics$receiver_beta[1] == sim$beta &
               acoustics$receiver_gamma[1] == sim$gamma)

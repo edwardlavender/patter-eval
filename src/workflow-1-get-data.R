@@ -20,16 +20,11 @@ get_acoustics <- function(sim, acoustics) {
   # Define the full acoustic time series
   acoustics <-
     acoustics[[sim$combination]][[sim$array_type]] |>
+    lazy_dt(immutable = TRUE) |>
     filter(array_id == sim$array_realisation) |>
     filter(path_id == sim$path_realisation) |>
     select("timestamp", "obs", "sensor_id", "receiver_x", "receiver_y") |>
     as.data.table()
-  # Use detection probability parameters from sim
-  # * This is required b/c the parameters used to simulate data
-  # * ... differ from those used to model data for sensitivity simulations
-  acoustics[, receiver_alpha := sim$alpha]
-  acoustics[, receiver_beta := sim$beta]
-  acoustics[, receiver_gamma := sim$gamma]
   # Identify the detections
   dets <-
     acoustics |>
