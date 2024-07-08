@@ -110,16 +110,6 @@ if (FALSE) {
          pch = ".")
 }
 
-#### Validation
-# Validate detection probability parameters
-cl_lapply(seq_len(nrow(sims)), function(i) {
-  # print(i)
-  sim <- sims[i, ]
-  acoustics <- read_acoustics(sim)
-  stopifnot(acoustics$receiver_alpha[1] == sim$alpha & acoustics$receiver_beta[1] == sim$beta & acoustics$receiver_gamma[1] == sim$gamma)
-  NULL
-})
-
 
 #########################
 #########################
