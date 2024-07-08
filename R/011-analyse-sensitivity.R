@@ -41,8 +41,8 @@ sims_senstivity    <- readRDS(here_input("sims-sensitivity-minimal.rds"))
 #########################
 #### Data preparation
 
-selected_pars <- c("alpha", "beta", "gamma",
-                   "mobility", "shape", "scale")
+selected_pars <- c("shape", "scale", "mobility",
+                   "alpha", "beta", "gamma")
 
 if (FALSE) {
 
@@ -83,7 +83,7 @@ if (FALSE) {
 
   #### Build the sims data.table
   sims <-
-    cl_lapply(c("alpha", "beta", "gamma", "mobility", "shape", "scale"), function(parameter_name) {
+    cl_lapply(selected_pars, function(parameter_name) {
 
       # Define alg_par indices for the relevant parameter
       # (This will enable us to define the simulations where the value of that parameter changed)
@@ -255,6 +255,31 @@ png(here_fig("sensitivity", "parameters.png"),
     height = 6, width = 8, units = "in", res = 600)
 pp <- par(mfrow = c(2, 3), oma = c(2, 2, 2, 2), mar = c(1, 1, 1, 1))
 
+# Visualise shape
+y <- dtruncgamma(x, defaults$shape, defaults$scale, defaults$mobility, TRUE)
+pretty_base(x, y)
+shapes <- defaults$shape * multiplier
+sapply(index, function(i) {
+  lines(x, dtruncgamma(x, shapes[i], defaults$scale, defaults$mobility, TRUE),
+        col = cols[i], lty = ltys[i])
+})
+
+# Visualise scale
+pretty_base(x, y)
+scales <- defaults$scale * multiplier
+sapply(index, function(i) {
+  lines(x, dtruncgamma(x, defaults$shape, scales[i], defaults$mobility, TRUE),
+        col = cols[i], lty = ltys[i])
+})
+
+# Visualise mobility
+pretty_base(x, y)
+mobilities <- defaults$mobility * multiplier
+sapply(index, function(i) {
+  lines(x, dtruncgamma(x, defaults$shape, defaults$scale, mobilities[i], TRUE),
+        col = cols[i], lty = ltys[i])
+})
+
 # Visualise alpha
 y <- ddetlogistic(x, defaults$alpha, defaults$beta, defaults$gamma)
 pretty_base(x, y)
@@ -280,30 +305,6 @@ sapply(index, function(i) {
         col = cols[i], lty = ltys[i])
 })
 
-# Visualise shape
-y <- dtruncgamma(x, defaults$shape, defaults$scale, defaults$mobility, TRUE)
-pretty_base(x, y)
-shapes <- defaults$shape * multiplier
-sapply(index, function(i) {
-  lines(x, dtruncgamma(x, shapes[i], defaults$scale, defaults$mobility, TRUE),
-        col = cols[i], lty = ltys[i])
-})
-
-# Visualise scale
-pretty_base(x, y)
-scales <- defaults$scale * multiplier
-sapply(index, function(i) {
-  lines(x, dtruncgamma(x, defaults$shape, scales[i], defaults$mobility, TRUE),
-        col = cols[i], lty = ltys[i])
-})
-
-# Visualise mobility
-pretty_base(x, y)
-mobilities <- defaults$mobility * multiplier
-sapply(index, function(i) {
-  lines(x, dtruncgamma(x, defaults$shape, defaults$scale, mobilities[i], TRUE),
-        col = cols[i], lty = ltys[i])
-})
 dev.off()
 
 #### Plot legend
@@ -347,9 +348,9 @@ convergence <-
   summarise(failure = length(which(convergence == FALSE)) / n()) |>
   mutate(algorithm = factor(algorithm, levels = c("ACPF", "ACDCPF")),
          arrangement = factor(arrangement, levels = c("random", "regular")),
-         parameter = factor(parameter, levels = c("alpha", "beta", "gamma", "shape", "scale", "mobility")),
-         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE),
-         group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
+         parameter = factor(parameter, levels = c("shape", "scale", "mobility", "alpha", "beta", "gamma")),
+         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE)#,
+         # group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
          ) |>
   as.data.table()
 
@@ -526,8 +527,10 @@ if (metric == "path") {
              parameter, algorithm) |>
     mutate(error = error / error[performance == TRUE]) |>
     ungroup() |>
-    mutate(group = interaction(arrangement, n_receiver, lex.order = TRUE),
-           group = factor(group, levels = levels(group), labels = 1:length(levels(group)))) |>
+    mutate(arrangement = factor(arrangement, c("random", "regular"), c("Random", "Regular")),
+           n_receiver = factor(n_receiver, unique(sort(n_receiver)), paste("n =", unique(sort(n_receiver)))),
+           group = interaction(arrangement, n_receiver,sep = ", ", lex.order = FALSE)) |>
+           # group = factor(group, levels = levels(group), labels = 1:length(levels(group)))) |>
     filter(!is.na(error)) |>
     as.data.table()
 }
