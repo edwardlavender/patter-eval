@@ -89,7 +89,8 @@ if (type == "performance") {
   nrow(sims)
 
   # Choose batch
-  batch    <- 1:1300L
+  batch      <- 1:nrow(sims)
+  # batch    <- 1:1300L
   # batch    <- 1301:2600L
   # batch    <- 2601:3600L
   batch_id <- min(batch)
@@ -108,6 +109,16 @@ if (FALSE) {
                            xy = TRUE, values = FALSE),
          pch = ".")
 }
+
+#### Validation
+# Validate detection probability parameters
+cl_lapply(seq_len(nrow(sims)), function(i) {
+  # print(i)
+  sim <- sims[i, ]
+  acoustics <- read_acoustics(sim)
+  stopifnot(acoustics$receiver_alpha[1] == sim$alpha & acoustics$receiver_beta[1] == sim$beta & acoustics$receiver_gamma[1] == sim$gamma)
+  NULL
+})
 
 
 #########################
