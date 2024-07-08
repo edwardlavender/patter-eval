@@ -42,10 +42,18 @@ workflow_patter <- function(sim, spat, win, performance = TRUE, test = FALSE) {
   acoustics  <- read_acoustics(sim)
   archival   <- read_archival(sim)
 
-  # Algorithm components
+  # Timeline
   t1         <- min(acoustics$timestamp)
   tT         <- max(acoustics$timestamp)
   timeline   <- seq(t1, tT, by = "2 mins")
+
+  # Observation model
+  # * Observation model parameters are baked into acoustics and archival
+  stopifnot(acoustics$receiver_alpha[1] == sim$alpha &
+              acoustics$receiver_beta[1] == sim$beta &
+              acoustics$receiver_gamma[1] == sim$gamma)
+
+  # Movement model
   model_move <-
     move_xy(dbn_length =
               glue::glue("truncated(Gamma({sim$shape},
