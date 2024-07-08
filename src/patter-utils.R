@@ -7,9 +7,13 @@ rtruncgamma <- function(.n, .shape, .scale, .mobility) {
                     shape = .shape, scale = .scale)
 }
 
-dtruncgamma <- function(.x, .shape, .scale, .mobility) {
-  truncdist::dtrunc(.x, "gamma", a = 0, b = .mobility,
+dtruncgamma <- function(.x, .shape, .scale, .mobility, .scale_to_one = FALSE) {
+  y <- truncdist::dtrunc(.x, "gamma", a = 0, b = .mobility,
                     shape = .shape, scale = .scale)
+  if (.scale_to_one) {
+    y <- y / max(y)
+  }
+  y
 }
 
 check_multithreading <- function(.multithread = c("R", "Julia")) {
