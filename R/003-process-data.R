@@ -132,13 +132,16 @@ sims_for_realisations <-
 sims_for_realisations_ls <-
   split(sims_for_realisations, seq_len(nrow(sims_for_realisations)))
 pbapply::pblapply(sims_for_realisations_ls, cl = 10L, function(sim) {
+  # sim <- sims_for_realisations_ls[[3]]
   folder <- here_input("acoustics",
                        sim$combination,
                        sim$array_type, sim$array_realisation,
                        sim$path_realisation)
   dir.create(folder, recursive = TRUE)
+  # `acc` contains modified detection probability parameters from sim
   acc <- get_acoustics(sim, acoustics)
-  det <- acc[obs == 1L, ]
+  # `det` is used for RSP & contains true detection probability parameters
+  det <- get_detections(sim, detections)
   qs::qsave(acc, file.path(folder, "acoustics.qs"))
   qs::qsave(det, file.path(folder, "detections.qs"))
   TRUE
