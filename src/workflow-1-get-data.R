@@ -7,6 +7,8 @@ get_array <- function(sim, arrays) {
 }
 
 get_detections <- function(sim, detections) {
+  # This is used for RSP analyses (performance sims only)
+  # So we keep the detection probability parameters used to simulate data
   detections[[sim$combination]][[sim$array_type]] |>
     filter(array_id == sim$array_realisation) |>
     filter(path_id == sim$path_realisation) |>
@@ -20,7 +22,14 @@ get_acoustics <- function(sim, acoustics) {
     acoustics[[sim$combination]][[sim$array_type]] |>
     filter(array_id == sim$array_realisation) |>
     filter(path_id == sim$path_realisation) |>
+    select("timestamp", "obs", "sensor_id", "receiver_x", "receiver_y") |>
     as.data.table()
+  # Use detection probability parameters from sim
+  # * This is required b/c the parameters used to simulate data
+  # * ... differ from those used to model data for sensitivity simulations
+  acoustics[, receiver_alpha := sim$alpha]
+  acoustics[, receiver_beta := sim$beta]
+  acoustics[, receiver_gamma := sim$gamma]
   # Identify the detections
   dets <-
     acoustics |>
