@@ -25,6 +25,7 @@ library(patter)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
 library(prettyGraphics)
 library(testthat)
 library(tictoc)
@@ -38,7 +39,97 @@ skills <- readRDS(here_output("synthesis", "skill.rds"))
 
 #########################
 #########################
-#### Data preparation
+#### Computation time
+
+#### Define a data.table of wall times (~2 s)
+# Times are for single-threaded mode with parallelisation from R
+# Times (for performance sims) recorded on SIA-LAVENDED
+time <- cl_lapply(.x = split(sims, seq_row(sims)),
+                  .fun = function(sim) {
+
+                    lapply(c("acpf", "acdcpf"), function(alg) {
+
+                      # Define convergence.rds & time.qs
+                      file_convergence <-
+                        here_alg(sim, "patter", alg, sim$alg_par, "convergence.rds")
+                      file_time <-
+                        here_alg(sim, "patter", alg, sim$alg_par, "time.qs")
+
+                      # Validate file paths
+                      # expect_true(file.exists(file_convergence))
+                      # expect_true(file.exists(file_time))
+
+                      # Read files
+                      if (file.exists(file_time)) {
+                        time <- qs::qread(file_time)
+                      } else {
+                        time <- data.table(id = sim$id,
+                                           pff = NA_real_,
+                                           pfbs = NA_real_,
+                                           udf = NA_real_,
+                                           uds = NA_real_,
+                                           n = NA_integer_,
+                                           success = FALSE)
+                      }
+                      time[, n := nrow(read_path(sim))]
+                      time[, success := FALSE]
+                      if (file.exists(file_convergence)) {
+                        time[, success := readRDS(file_convergence)]
+                      }
+                      time[, algorithm := alg]
+                      time
+
+                    }) |> rbindlist()
+
+
+                  }, .combine = rbindlist)
+
+#### Summary statistics
+head(time)
+nrow(time)
+# Convergence
+time[success == FALSE, ]
+# Forward filter time (per time step) in seconds
+(time[, pff / n] * 60) |> utils.add::basic_stats(na.rm = TRUE, p = NULL)
+# Smoothing time (per time step) in seconds
+(time[, pfbs / n] * 60) |> utils.add::basic_stats(na.rm = TRUE, p = NULL)
+
+#### Visualise wall time
+# Define total wall time
+ggtime_total <-
+  time |>
+  tidyr::pivot_longer(cols = c(pff, pfbs), names_to = "routine", values_to = "time") |>
+  mutate(time = time * 60,
+         Algorithm = factor(algorithm, levels = c("acpf", "acdcpf"), labels = c("ACPF", "ACDCPF")),
+         routine = factor(routine, levels = c("pff", "pfbs"), labels = c("Forward filter", "Smoother")),
+         statistic = "(A) Total wall time") |>
+  as.data.table()
+# Define wall time per time step
+ggtime_step <- copy(ggtime_total)
+ggtime_step[, statistic := "(B) Wall time per time step"]
+ggtime_step[, time := time / n]
+# Summarise wall time per time step
+ggtime_step |>
+  group_by(routine, algorithm) |>
+  reframe(range(time, na.rm = TRUE))
+# Collect wall time statistics
+ggtime <- rbind(ggtime_total, ggtime_step)
+# Visualise wall time statistics
+png(here_fig("performance", "wall-time.png"),
+    height = 4, width = 10, units = "in", res = 600)
+ggplot(ggtime) +
+  geom_violin(aes(routine, time, fill = Algorithm)) +
+  facet_wrap(~statistic, scales = "free") +
+  xlab("Routine") + ylab("Time (s)") +
+  scale_y_continuous(expand = c(0, 0)) +
+  ggthemes::theme_clean() +
+  theme(strip.text = element_text(face = "bold"))
+dev.off()
+
+
+#########################
+#########################
+#### Figure preparation
 
 #### Define algorithms
 # Define algorithms (subset)
@@ -88,44 +179,6 @@ png_name <- function(name) {
   stopifnot(length(unique(skills$combination)) == 1L)
   paste0(name, "-",  skills$combination[1], ".png")
 }
-
-
-#########################
-#########################
-#### Computation time
-
-#### Define a data.table of wall times (~2 s)
-# Times are for single-threaded mode with parallelisation from R
-# Times (for performance sims) recorded on SIA-LAVENDED
-time <- cl_lapply(.x = split(sims, seq_row(sims)),
-                  .fun = function(sim) {
-
-  # Define convergence.rds & time.qs (for ACPF or ACDCPF)
-  alg <- "acpf"
-  # alg <- "acdcpf"
-  file_convergence <-
-    here_alg(sim, "patter", alg, sim$alg_par, "convergence.rds")
-  file_time <-
-    here_alg(sim, "patter", alg, sim$alg_par, "time.qs")
-
-  # Validate file paths
-  # expect_true(file.exists(file_convergence))
-  # expect_true(file.exists(file_time))
-
-  # Read files
-  time <- qs::qread(file_time)
-  time[, n := nrow(read_path(sim))]
-  time[, success := readRDS(file_convergence)]
-  time
-
-}, .combine = rbindlist)
-
-
-#### Summary statistics
-# Forward filter time (per time step) in seconds
-(time[, pff / n] * 60) |> utils.add::basic_stats(p = NULL)
-# Smoothing time (per time step) in seconds
-(time[, pfbs / n] * 60) |> utils.add::basic_stats(p = NULL)
 
 
 #########################
