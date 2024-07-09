@@ -116,7 +116,7 @@ ggtime_step |>
 ggtime <- rbind(ggtime_total, ggtime_step)
 # Visualise wall time statistics
 png(here_fig("performance", "wall-time.png"),
-    height = 4, width = 10, units = "in", res = 600)
+    height = 4, width = 12, units = "in", res = 600)
 ggplot(ggtime) +
   geom_violin(aes(routine, time, fill = Algorithm)) +
   facet_wrap(~statistic, scales = "free") +
