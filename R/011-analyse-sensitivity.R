@@ -213,6 +213,7 @@ if (FALSE) {
 sims[, arrangement := factor(arrangement, levels = c("random", "regular"))]
 sims[, algorithm := factor(algorithm, levels = c("ACPF", "ACDCPF"))]
 
+
 #########################
 #########################
 #### Visualise models
@@ -345,7 +346,8 @@ convergence <-
   sims |>
   group_by(combination, array_type, arrangement, n_receiver, array_realisation,
            parameter, degree, algorithm) |>
-  summarise(failure = length(which(convergence == FALSE)) / n()) |>
+  summarise(n = n(),
+            failure = length(which(convergence == FALSE)) / n) |>
   mutate(algorithm = factor(algorithm, levels = c("ACPF", "ACDCPF")),
          arrangement = factor(arrangement, levels = c("random", "regular")),
          parameter = factor(parameter, levels = c("shape", "scale", "mobility", "alpha", "beta", "gamma")),
@@ -353,6 +355,8 @@ convergence <-
          # group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
          ) |>
   as.data.table()
+
+table(convergence$n)
 
 #### Visualise the failure rate ~ degree of mis-specification
 png(here_fig("sensitivity", "convergence.png"),
@@ -369,10 +373,6 @@ ggplot(convergence) +
         panel.grid.minor.y = element_blank(),
         strip.text = element_text(face = "bold"))
 dev.off()
-
-#### Results
-# Convergence is especially sensitive to mobility, scale and shape
-# Results are similar for array arrangements and ACPF/ACDCPF
 
 
 #########################
