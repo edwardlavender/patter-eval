@@ -110,8 +110,12 @@ ggtime_step[, statistic := "(B) Wall time per time step"]
 ggtime_step[, time := time / n]
 # Summarise wall time per time step
 ggtime_step |>
-  group_by(routine, algorithm) |>
-  reframe(range(time, na.rm = TRUE))
+  filter(routine == "Forward filter") |>
+  group_by(algorithm) |>
+  reframe(mean(time, na.rm = TRUE))
+ggtime_step |>
+  filter(routine == "Smoother") |>
+  summarise(mean(time, na.rm = TRUE))
 # Collect wall time statistics
 ggtime <- rbind(ggtime_total, ggtime_step)
 # Visualise wall time statistics
