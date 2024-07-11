@@ -83,7 +83,7 @@ if (FALSE) {
 
   #### Build the sims data.table
   sims <-
-    cl_lapply(selected_pars, function(parameter_name) {
+    lapply(selected_pars, function(parameter_name) {
 
       # Define alg_par indices for the relevant parameter
       # (This will enable us to define the simulations where the value of that parameter changed)
@@ -96,7 +96,7 @@ if (FALSE) {
 
       # Define the relevant simulations for that parameter
       sims_for_par <-
-        # Join performance & sensitvity simulations
+        # Join performance & sensitivity simulations
         # (i.e., We include the correct value for each parameter as well as all the mis-specified values)
         rbind(sims_performance, sims_senstivity) |>
         # Focus on the relevant parameter using the alg_par index
@@ -491,9 +491,6 @@ cl_lapply(selected_pars,
 #########################
 #########################
 #### Boxplots
-
-sims[, error_path := me_path]
-sims[, error_alg := me_alg]
 
 #### Choose error metric
 # Use `error_path` or `error_alg`
