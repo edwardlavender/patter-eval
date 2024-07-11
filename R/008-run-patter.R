@@ -94,6 +94,8 @@ if (type == "performance") {
   # batch    <- 1301:2600L
   # batch    <- 2601:3600L
   batch_id <- min(batch)
+  sims     <- sims[batch, ]
+  sims     <- do_sims(sims)
 
 }
 rm(sims_for_performance, sims_for_sensitivity)
