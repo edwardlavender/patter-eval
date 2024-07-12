@@ -32,6 +32,7 @@ library(tictoc)
 dv::src()
 
 #### Load data
+spat <- terra::rast(here_input("spat.tif"))
 sims_performance   <- readRDS(here_input("sims-performance.rds"))
 sims_senstivity    <- readRDS(here_input("sims-sensitivity-minimal.rds"))
 # skills <- readRDS(here_output("synthesis", "skill.rds"))
@@ -231,6 +232,7 @@ defaults <-
 # Define graphical parameters (e.g., cols)
 gp <- data.frame(
   multiplier = c(0.1, 0.5, 1.0, 1.5, 2.0),
+  label = c("0.1", "0.5", "1.0", "1.5", "2.0"),
   col = c("red", "blue", "black", "orange", "purple"),
   lty = c(2, 3, 1, 4, 5)
   )
@@ -313,7 +315,7 @@ png(here_fig("sensitivity", "parameters-legend.png"),
     height = 3, width = 3, units = "in", res = 600)
 plot(0, 0, type = "n")
 legend("topleft",
-       legend = c("0.1", "0.5", "1.0", "1.5", "2.0"),
+       legend = gp$label,
        col = gp$col,
        lty = gp$lty,
        lwd = c(1, 1, 4, 1, 1))
@@ -351,8 +353,8 @@ convergence <-
   mutate(algorithm = factor(algorithm, levels = c("ACPF", "ACDCPF")),
          arrangement = factor(arrangement, levels = c("random", "regular")),
          parameter = factor(parameter, levels = c("shape", "scale", "mobility", "alpha", "beta", "gamma")),
-         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE)#,
-         # group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
+         group = interaction(algorithm, arrangement, parameter, sep = ", ", lex.order = TRUE),
+         group = factor(group, levels = levels(group), labels = LETTERS[1:length(levels(group))])
          ) |>
   as.data.table()
 
@@ -367,12 +369,25 @@ ggplot(convergence) +
               width = 0.1, height = 0) +
   # facet_wrap(~algorithm + arrangement + parameter, ncol = 6) +
   facet_wrap(~group, ncol = 6) +
+  scale_x_continuous(breaks = gp$multiplier, labels = gp$label) +
   # scale_y_continuous(expand = c(0, 0)) +
   theme_bw() +
   theme(panel.grid.major.x = element_blank(),
         panel.grid.minor.y = element_blank(),
         strip.text = element_text(face = "bold"))
 dev.off()
+
+#### Example checks
+sims |>
+  filter(parameter == "beta") |>
+  mutate(check = beta) |>
+  group_by(combination, array_type, arrangement, n_receiver, array_realisation,
+           parameter, check, algorithm) |>
+  summarise(failure = length(which(convergence == FALSE)) / n()) |>
+  as.data.table() |>
+  ggplot(aes(check, failure, colour = factor(n_receiver))) +
+  geom_point() +
+  facet_wrap(~algorithm + arrangement)
 
 
 #########################
@@ -386,9 +401,19 @@ dev.off()
 # This provides a visual assessment of how maps are
 # ... affected by parameter mis-specification.
 
-#### Make maps (~ 9 s, 6 cl; 45 s, 1 cl)
-cl_lapply(selected_pars,
-          .cl = 6L,
+#### Compute map area
+area <- terra::cellSize(spat)
+
+#### Make maps(~ 9 s, 6 cl; 45 s, 1 cl)
+# This returns a list, with one element for each parameter
+# Each parameter element is a list, with one element for each array design
+# Each design element is a list with the UD for each panel
+# We use UDs below to calculate home range area
+# This code also produces maps
+# NB: .cl must be NULL if the UDs are returned
+uds <-
+  cl_lapply(selected_pars,
+          .cl = NULL,
           .fun = function(parameter_name) {
 
   # parameter_name <- "alpha"
@@ -402,7 +427,8 @@ cl_lapply(selected_pars,
   designs <- CJ(n_receiver = range(sims$n_receiver),
                 arrangement = c("random", "regular"))
 
-  lapply(split(designs, seq_row(designs)), function(design) {
+  uds_by_design <-
+    lapply(split(designs, seq_row(designs)), function(design) {
 
     # design <- designs[1, ]
     sims_for_maps <-
@@ -434,9 +460,13 @@ cl_lapply(selected_pars,
     ud_acdcpf_over  <- read_rast(here_alg(sim, "patter", "acdcpf", folder_over, "ud-s.tif"))
 
     #### Define scaling parameter
-    uds <- list(ud_path,
-                ud_acpf_under, ud_acpf_best, ud_acpf_over,
-                ud_acdcpf_under, ud_acdcpf_best, ud_acdcpf_over)
+    uds <- list(path = ud_path,
+                acpf_under = ud_acpf_under,
+                acpf_best = ud_acpf_best,
+                acpf_over = ud_acpf_over,
+                acdcpf_under = ud_acdcpf_under,
+                acdcpf_best = ud_acdcpf_best,
+                acdcpf_over = ud_acdcpf_over)
     scale <- sapply(uds, \(ud) {
       if (is.null(ud)) {
         return(NA)
@@ -448,8 +478,10 @@ cl_lapply(selected_pars,
 
     #### Plot UDs for selected array
     m <- read_array(sim)
-    lapply(uds, function(ud) {
+    lapply(seq_len(length(uds)), function(ud_index) {
       # If the UD is NULL, make a blank placeholder plot
+      # ud_index
+      ud <- uds[[ud_index]]
       if (is.null(ud)) {
         terra::plot(dat_gebco(), axes = FALSE, legend = FALSE, col = NA)
         return(NULL)
@@ -465,8 +497,8 @@ cl_lapply(selected_pars,
         return(NULL)
       }
       # Add home range (based on unscaled UD)
-      map_hr_home(ud, .add = TRUE,
-                  border = "dimgrey", lwd = 0.75)
+      hr <- map_hr_home(ud, .add = TRUE,
+                        border = "dimgrey", lwd = 0.75)
       # Plot UD (scaled)
       # terra::plot(ud)
       # Add receivers
@@ -477,15 +509,93 @@ cl_lapply(selected_pars,
              cex = 0.5)
       spatAxes(ud)
       # terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
-      NULL
+      # Return raw ud
+      ud
     })
 
   })
 
   par(pp)
   dev.off()
+  uds_by_design
 
 }) |> invisible()
+
+#### Compute home-range area
+# Build a data.table of home range areas
+hr <- CJ(parameter = 1:6, design = 1:4, implementation = 1:7, area = NA_real_)
+hr <- cl_lapply(split(hr, seq_row(hr)), function(d) {
+  # Get UD
+  ud <- uds[[d$parameter]][[d$design]][[d$implementation]]
+  # Compute home-range area (km2)
+  if (is.null(ud)) {
+    return(d)
+  }
+  hr <- map_hr_home(ud, .add = FALSE)
+  hr    <- terra::classify(hr, cbind(0, NA))
+  hr_cz <- terra::mask(area, hr)
+  # terra::plot(hr_cz)
+  d[, area := terra::global(hr_cz, "sum", na.rm = TRUE)[1, 1] / 1e6]
+  d
+}, .combine = rbindlist)
+# Define convenience variables/objects for plotting
+hr[, group := .GRP, by = .(parameter, design)]
+ylim <- c(0, max(hr$area, na.rm = TRUE))
+
+#### Visualise home range area
+# Columns: Parameters
+# Rows: Array designs
+# We will manually add the plots to the right-hand side of the relevant map
+
+# Check column fill order
+pp <- par(mfcol = c(4, 6))
+for (i in 1:24) {
+  plot(i, main = i)
+}
+par(pp)
+
+# Make figure
+png(here_fig("sensitivity", "hr-area.png"),
+    height = 6, width = 10, units = "in", res = 600)
+pp <- par(mfcol = c(4, 6),
+          oma = c(2, 2, 2, 2),
+          mar = c(1, 1, 1, 1))
+lapply(split(hr, hr$group), function(d) {
+  # Process data.table for convenience
+  # d <- split(hr, hr$group)[[12]]
+  d$x <- d$implementation
+  d$y <- d$area
+  # Define bar colours (distinguish algorithms + implementations)
+  # path, acpf_under, acpf_best, acpf_over, acdcpf_under, acdcpf_best, acdcpf_over
+  d$col <- c("dimgrey",
+             alpha("red", 0.2), alpha("red", 0.5), alpha("red", 0.8),
+             alpha("blue", 0.2), alpha("blue", 0.5), alpha("blue", 0.8))
+  # Distinguish 'best'
+  d$lwd <- c(1,
+             1, 2, 1,
+             1, 2, 1)
+  # Create blank plot
+  axis_ls <- pretty_plot(d$x,
+                         d$y,
+                         xlim = c(0.5, max(d$x) + 0.5),
+                         ylim = ylim,
+                         pretty_axis = list(axis = list(list(side = 1, at = d$x),
+                                                        list(NULL))),
+                         xlab = "", ylab = "",
+                         type = "n")
+  # Add bars
+  for (j in seq_len(nrow(d))) {
+    rect(xleft = d$x[j] - 0.5,
+         ybottom = axis_ls[[2]]$lim[1],
+         xright = d$x[j] + 0.5,
+         ytop = d$y[j],
+         col = d$col[j],
+         lwd = d$lwd[j])
+
+  }
+}) |> invisible()
+par(pp)
+dev.off()
 
 
 #########################
@@ -549,13 +659,15 @@ cl_lapply(selected_pars, .cl = length(selected_pars), .fun = function(parameter_
     ggplot() +
     geom_boxplot(aes(x = factor(degree), y = error, fill = algorithm),
                  varwidth = TRUE) +
+    scale_x_discrete(breaks = gp$multiplier, labels = gp$label) +
     # ylim(ylim) +
     # scale_y_continuous(labels = sci_notation) +
     # facet_wrap(~n_receiver + arrangement, ncol = 2) +
     xlab("") + ylab("") +
     facet_wrap(~group, ncol = 2) +
     theme_bw() +
-    theme(strip.text = element_text(face = "bold"))
+    theme(strip.text = element_text(face = "bold")) +
+    theme(panel.grid.minor = element_blank())
 
   print(p)
 
