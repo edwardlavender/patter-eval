@@ -84,7 +84,7 @@ if (FALSE) {
 
   #### Build the sims data.table
   sims <-
-    lapply(selected_pars, function(parameter_name) {
+    cl_lapply(selected_pars, function(parameter_name) {
 
       # Define alg_par indices for the relevant parameter
       # (This will enable us to define the simulations where the value of that parameter changed)
@@ -129,7 +129,7 @@ if (FALSE) {
 
     }, .combine = rbindlist)
 
-  #### Add error statistics (~2.75 mins with 10 cl)
+  #### Add error statistics (~4 mins with 10 cl)
   # For each simulation, we compute the mean error
   # We focus on mean error as the performance skill analysis
   # ... shows this metric is most effective at distinguishing skill
@@ -140,8 +140,11 @@ if (FALSE) {
   # * The efficiency of this code can be improved by only reading true/performance UDs once
   # * But it is easy to read this way
 
+  # Define iteration index
   sims[, index := seq_row(sims)]
   nrow(sims)
+
+  # Compute error statistics
   sims <- cl_lapply(split(sims, seq_row(sims)),
                     .cl = 10L,
                     .chunk = TRUE,
@@ -151,6 +154,13 @@ if (FALSE) {
                       # sim <- sims[419, ]
                       print(sim$index)
                       path   <- terra::rast(here_alg(sim, "path", "ud.tif"))
+
+                      # Read heuristic method UDs
+                      null  <- terra::rast(here_input("blank.tif"))
+                      coa_1 <- read_rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
+                      coa_2 <- read_rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
+                      rsp_1 <- read_rast(here_alg(sim, "rsp", "default", "ud.tif"))
+                      rsp_2 <- read_rast(here_alg(sim, "rsp", "custom", "ud.tif"))
 
                       # Read 'best' algorithm UDs
                       # * alg_par = "1" is the default parameters
@@ -162,18 +172,49 @@ if (FALSE) {
                       acdcpf_alg <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
 
                       # Define data.table for results
-                      out <- rbind(sim, sim)
-                      out[, algorithm := c("ACPF", "ACDCPF")]
+                      # (One row for each algorithm)
+                      out <- rbind(sim,
+                                   sim, sim,
+                                   sim, sim,
+                                   sim, sim)
+                      out[, algorithm := c("NULL",
+                                           "COA (1)", "COA (2)",
+                                           "RSP (1)", "RSP (2)",
+                                           "ACPF", "ACDCPF")]
 
                       # Calculate skill against 'true' UD
-                      out[, error_path := c(skill_mew(path, acpf_alg), skill_mew(path, acdcpf_alg))]
+                      out[, error_path := skill_by_alg(list(null,
+                                                            coa_1, coa_2,
+                                                            rsp_1, rsp_2,
+                                                            acpf_alg, acdcpf_alg),
+                                                       path,
+                                                       .f = patter::skill_me)]
 
-                      # Calculate skill against 'performance' algorithm implementation
-                      out[, error_alg := c(skill_mew(acpf_best, acpf_alg), skill_mew(acdcpf_best, acdcpf_alg))]
+                      # (deprecated) Calculate skill against 'performance' algorithm implementation
+                      out[, error_alg := c(NA_real_,
+                                           NA_real_, NA_real_,
+                                           NA_real_, NA_real_,
+                                           skill_mew(acpf_best, acpf_alg),
+                                           skill_mew(acdcpf_best, acdcpf_alg))]
 
                       out
 
                     }, .combine = rbindlist)
+
+  #### Save full dataset
+  # The full dataset is used to compare heuristic to mis-specified flapper algorithms
+  # ... to test if mis-specified algorithms continue to be better than heuristic methods
+  nrow(sims)
+  sims_full <- copy(sims)
+  saveRDS(sims_full, here_output("synthesis", "skill-sensitivity-full.rds"))
+
+
+  #### Process subsetted dataset
+  # A subsetted dataset is required to analyse flapper algorithm sensitivity
+  sims <- sims[algorithm %in% c("ACPF", "ACDCPF"), ]
+  sims[, arrangement := factor(arrangement, levels = c("random", "regular"))]
+  sims[, algorithm := factor(algorithm, levels = c("ACPF", "ACDCPF"))]
+  nrow(sims)
 
   #### Add convergence (~16 s, 1 cl)
   sims <-
@@ -208,11 +249,8 @@ if (FALSE) {
 } else {
 
   sims <- readRDS(here_output("synthesis", "skill-sensitivity.rds"))
-
+  sims_full <- readRDS(here_output("synthesis", "skill-sensitivity-full.rds"))
 }
-
-sims[, arrangement := factor(arrangement, levels = c("random", "regular"))]
-sims[, algorithm := factor(algorithm, levels = c("ACPF", "ACDCPF"))]
 
 
 #########################
@@ -674,6 +712,113 @@ cl_lapply(selected_pars, .cl = length(selected_pars), .fun = function(parameter_
   dev.off()
 
 })
+
+
+#########################
+#########################
+#### Skill
+
+# Within the realms of what is compatible with the data,
+# are algorithms still better than heuristic methods?
+
+#### Define skills dataset
+skills <- copy(sims_full)
+skills[, alg := algorithm]
+
+#### Define algorithms
+# This code is tweaked from analyse-performance.R
+unique(skills$alg)
+algs <- data.frame(alg = c("NULL", "COA (1)", "COA (2)", "RSP (1)", "RSP (2)", "ACPF", "ACDCPF"),
+                   alg_name = c("Null", "COA", "COA", "RSP", "RSP",  "ACPF", "ACDCPF"),
+                   col_name = c("dimgrey", "red", "darkred", "orange", "darkorange", "lightgreen", "darkgreen")
+                   )
+algs$col   <- scales::alpha(algs$col_name, 0.5)
+algs$label <- seq_len(nrow(algs))
+skills <-
+  skills |>
+  filter(algorithm %in% algs$alg) |>
+  left_join(algs, by = "alg", relationship = "many-to-one") |>
+  as.data.table()
+
+#### Define an iteration dataset
+# We iterate over parameters/arrangements/degrees to make plots
+iter <- CJ(parameter = selected_pars,
+           arrangement = c("random", "regular"),
+           degree = sort(unique(skills$degree)),
+           sorted = FALSE)
+iter[, index := .I]
+# Check column fill order
+pp <- par(mfcol = c(3, 4))
+for (i in 1:12) plot(1, main = i)
+par(pp)
+# Make fig
+png(here_fig("sensitivity", "heuristic-comparison.png"),
+    height = 4, width = 10, units = "in", res = 600)
+pp <- par(mfcol = c(5, 12),
+          oma = c(2, 2, 2, 2),
+          mar = c(0, 0, 0, 0),
+          xaxs = "i", yaxs = "i")
+xlim <- c(0, 120)
+paa <- list(side = 1:4,
+            axis = list(list(labels = FALSE, tck = 0.04),
+                        list(labels = FALSE, lwd.ticks = 0),
+                        list(labels = FALSE, lwd.ticks = 0),
+                        list(labels = FALSE, lwd.ticks = 0)))
+lapply(split(iter, seq_row(iter)), function(it) {
+  # Get skill data
+  # it <- iter[1, ]
+  sk <- skills[parameter == it$parameter &
+                 arrangement == it$arrangement &
+                 degree == it$degree, ]
+  x <- sk$n_receiver + rnorm(nrow(sk), 0, 1)
+  y <- sk$error_path
+  # Check the number of successful ACPF/ACDCPF runs
+  v1 <- sk[algorithm == "ACPF" & !is.na(error_path), ]
+  v2 <- sk[algorithm == "ACDCPF" & !is.na(error_path), ]
+  n1 <- length(unique(v1$n_receiver)) # length(which(!is.na(sk$error_path[sk$algorithm == "ACPF"])))
+  n2 <- length(unique(v1$n_receiver)) # length(which(!is.na(sk$error_path[sk$algorithm == "ACDCPF"])))
+  # If there are very few convergence successes, simply plot a blank placeholder plot
+  if (n1 < 3 & n2 < 3) {
+    pretty_plot(x, y,
+                xlim = xlim,
+                pretty_axis_args = paa,
+                type = "n")
+    # mtext(side = 3, text = paste(it$parameter, it$arrangement, it$degree), cex = 0.3)
+    return(NULL)
+  }
+  # Visualise skill ~ n_receivers
+  pretty_plot(x, y,
+              xlim = xlim,
+              pretty_axis_args = paa,
+              col = scales::alpha(sk$col, 0.25),
+              xlab = "", ylab = "",
+              cex = 0.5, lwd = 0.5)
+  # mtext(side = 3, text = paste(it$parameter, it$arrangement, it$degree), cex = 0.3)
+  # mtext(side = 3, text = paste(it$index))
+  # Add trends for each algorithm
+  lapply(split(sk, sk$alg, drop = TRUE), function(d) {
+    # d <- split(sk, sk$alg)[[1]]
+    try(add_smoother(d$n_receiver, d$error_path, col = d$col, lwd = 2),
+        silent = TRUE)
+  }) |> invisible()
+}) |> invisible()
+dev.off()
+
+# ggplot2 version
+if (FALSE) {
+  png(here_fig("sensitivity", "heuristic-comparison.png"),
+      height = 10, width = 15, units = "in", res = 600)
+  ggplot(skill,
+         aes(x = n_receiver + rnorm(nrow(sk), 0, 1),
+             y = error_path,
+             group = algorithm,
+             colour = algorithm)) +
+    geom_point() +
+    geom_smooth() +
+    facet_wrap(~parameter + arrangement + degree)
+
+  dev.off()
+}
 
 
 #### End of code.
