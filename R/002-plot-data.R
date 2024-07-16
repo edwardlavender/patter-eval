@@ -21,8 +21,11 @@ dv::clear()
 #### Essential packages
 library(dv)
 library(prettyGraphics)
+dv::src()
 
 #### Load data
+spat           <- terra::rast(here_input("spat.tif"))
+arrays         <- readRDS(here_input("arrays.rds"))
 detection_pars <- readRDS(here_input("detection_pars.rds"))
 path_pars      <- readRDS(here_input("path_pars.rds"))
 
@@ -126,7 +129,7 @@ lapply(arrays, function(m) {
   spatMap(spat, legend = FALSE, col = viridis::mako(255),
           mar = NA, reset = TRUE)
   # Add receivers
-  points(m$receiver_easting, m$receiver_northing,
+  points(m$receiver_x, m$receiver_y,
          pch = 21,
          bg = scales::alpha("black", 0.75),
          col = scales::alpha("black", 0.75),

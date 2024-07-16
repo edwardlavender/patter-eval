@@ -17,7 +17,6 @@
 rm(list = ls())
 try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
-options(error = function(...) beepr::beep(7))
 
 #### Essential packages
 library(dv)
@@ -30,7 +29,6 @@ dv::src()
 
 #### Load data
 spatw      <- readRDS(here_input("spatw.rds"))
-im         <- qs::qread(here_input("im.qs"))
 win        <- qs::qread(here_input("win.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
@@ -49,7 +47,7 @@ if (test) {
   cl <- 10L
 }
 
-#### Run workflow (~25 s)
+#### Run workflow (~1.5 mins)
 gc()
 tic()
 success <- cl_lapply(sims_for_performance_ls,
@@ -58,7 +56,7 @@ success <- cl_lapply(sims_for_performance_ls,
                        print(sim$row)
                        workflow_coa(sim = sim,
                                     spat = .chunkargs$spat,
-                                    im = im, win = win)
+                                    win = win)
                      },
                      .chunk = TRUE,
                      .chunk_fun = function(sim) {
@@ -69,6 +67,8 @@ toc()
 
 #### Record success
 sdt <- rbindlist(success)
+sdt[coa_1 == FALSE, ]
+sdt[coa_2 == FALSE, ]
 saveRDS(sdt, here_data("sims", "output", "success", "coa.rds"))
 
 #### Quick checks
@@ -79,7 +79,7 @@ if (interactive()) {
   here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
   here_alg(s, "coa", "120 mins", "ud.tif") |> terra_qplot()
   m <- read_array(s)
-  points(m$receiver_easting, m$receiver_northing)
+  points(m$receiver_x, m$receiver_y)
   par(pp)
 }
 

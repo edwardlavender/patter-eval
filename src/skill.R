@@ -9,3 +9,10 @@ skill_by_alg <- function(.uds, .ud_path, .f = patter::skill_mb) {
   }) |>
     as.numeric()
 }
+
+skill_mew <- function(.obs, .mod) {
+  if (is.null(.obs) | is.null(.mod)) {
+    return(NA_real_)
+  }
+  skill_me(.obs = .obs, .mod = .mod)
+}

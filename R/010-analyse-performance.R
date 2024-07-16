@@ -19,24 +19,121 @@ try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
 
 #### Essential packages
+library(collapse)
 library(dv)
 library(patter)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
 library(prettyGraphics)
+library(testthat)
 library(tictoc)
 dv::src()
 
 #### Load data
 # Performance simulations
 sims   <- readRDS(here_input("sims-performance.rds"))
-skills <- readRDS(here_data("sims", "synthesis", "skill.rds"))
+skills <- readRDS(here_output("synthesis", "skill.rds"))
 
 
 #########################
 #########################
-#### Data preparation
+#### Computation time
+
+#### Define a data.table of wall times (~2 s)
+# Times are for single-threaded mode with parallelisation from R
+# Times (for performance sims) recorded on SIA-LAVENDED
+time <- cl_lapply(.x = split(sims, seq_row(sims)),
+                  .fun = function(sim) {
+
+                    lapply(c("acpf", "acdcpf"), function(alg) {
+
+                      # Define convergence.rds & time.qs
+                      file_convergence <-
+                        here_alg(sim, "patter", alg, sim$alg_par, "convergence.rds")
+                      file_time <-
+                        here_alg(sim, "patter", alg, sim$alg_par, "time.qs")
+
+                      # Validate file paths
+                      # expect_true(file.exists(file_convergence))
+                      # expect_true(file.exists(file_time))
+
+                      # Read files
+                      if (file.exists(file_time)) {
+                        time <- qs::qread(file_time)
+                      } else {
+                        time <- data.table(id = sim$id,
+                                           pff = NA_real_,
+                                           pfbs = NA_real_,
+                                           udf = NA_real_,
+                                           uds = NA_real_,
+                                           n = NA_integer_,
+                                           success = FALSE)
+                      }
+                      time[, n := nrow(read_path(sim))]
+                      time[, success := FALSE]
+                      if (file.exists(file_convergence)) {
+                        time[, success := readRDS(file_convergence)]
+                      }
+                      time[, algorithm := alg]
+                      time
+
+                    }) |> rbindlist()
+
+
+                  }, .combine = rbindlist)
+
+#### Summary statistics
+head(time)
+nrow(time)
+# Convergence
+time[success == FALSE, ]
+# Forward filter time (per time step) in seconds
+(time[, pff / n] * 60) |> utils.add::basic_stats(na.rm = TRUE, p = NULL)
+# Smoothing time (per time step) in seconds
+(time[, pfbs / n] * 60) |> utils.add::basic_stats(na.rm = TRUE, p = NULL)
+
+#### Visualise wall time
+# Define total wall time
+ggtime_total <-
+  time |>
+  tidyr::pivot_longer(cols = c(pff, pfbs), names_to = "routine", values_to = "time") |>
+  mutate(time = time * 60,
+         Algorithm = factor(algorithm, levels = c("acpf", "acdcpf"), labels = c("ACPF", "ACDCPF")),
+         routine = factor(routine, levels = c("pff", "pfbs"), labels = c("Forward filter", "Smoother")),
+         statistic = "(A) Total wall time") |>
+  as.data.table()
+# Define wall time per time step
+ggtime_step <- copy(ggtime_total)
+ggtime_step[, statistic := "(B) Wall time per time step"]
+ggtime_step[, time := time / n]
+# Summarise wall time per time step
+ggtime_step |>
+  filter(routine == "Forward filter") |>
+  group_by(algorithm) |>
+  reframe(mean(time, na.rm = TRUE))
+ggtime_step |>
+  filter(routine == "Smoother") |>
+  summarise(mean(time, na.rm = TRUE))
+# Collect wall time statistics
+ggtime <- rbind(ggtime_total, ggtime_step)
+# Visualise wall time statistics
+png(here_fig("performance", "wall-time.png"),
+    height = 4, width = 12, units = "in", res = 600)
+ggplot(ggtime) +
+  geom_violin(aes(routine, time, fill = Algorithm)) +
+  facet_wrap(~statistic, scales = "free") +
+  xlab("Routine") + ylab("Time (s)") +
+  scale_y_continuous(expand = c(0, 0)) +
+  ggthemes::theme_clean() +
+  theme(strip.text = element_text(face = "bold"))
+dev.off()
+
+
+#########################
+#########################
+#### Figure preparation
 
 #### Define algorithms
 # Define algorithms (subset)
@@ -94,102 +191,124 @@ png_name <- function(name) {
 
 #### Select simulations
 # For specific combination, select two receiver levels, one array/path realisation
+# This choice is informed by examination of the maps below
+# Good examples: 1, 3, 10, 24, 29
 sims_for_maps <-
   sims |>
   filter(n_receiver %in% nr) |>
-  filter(array_realisation == 1L & path_realisation == 1L) |>
+  filter(array_realisation == 1L & path_realisation == 3L) |>
   arrange(n_receiver, arrangement) |>
   as.data.table()
 
-#### Make maps (~37 s)
+#### Make maps (~5 mins)
 if (FALSE) {
 
-  #### Set up plot
-  # The figure will be annotated outside of R
-  # (optional) FLAG: adjust width & number of columns for algorithms
-  dir.create(here_fig("performance"), recursive = TRUE)
-  png(here_fig("performance", png_name("map")),
-      height = 8, width = 12, units = "in", res = 600)
-  pp <- par(mfrow = c(4, 9),
-            oma = c(0, 0, 0, 0), mar = rep(1, 4))
-  pbapply::pblapply(1:4, function(i) {
+  # Create a map for each path_realisation_index
+  tic()
+  lapply(sort(unique(sims$path_realisation)), function(path_realisation_index) {
 
-    #### Read UDs
-    sim        <- sims_for_maps[i, ]
-    # list.files(here_alg(sim), recursive = TRUE)
-    ud_path    <- terra::rast(here_alg(sim, "path", "ud.tif"))
-    ud_coa_1   <- terra::rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
-    ud_coa_2   <- terra::rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
-    ud_rsp_1   <- terra::rast(here_alg(sim, "rsp", "default", "ud.tif"))
-    ud_rsp_2   <- terra::rast(here_alg(sim, "rsp", "custom", "ud.tif"))
-    ud_acpff   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
-    ud_acdcpff <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
-    ud_acpfk   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-k.tif"))
-    ud_acdcpfk <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-k.tif"))
-    ud_acpfs   <- terra::rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
-    ud_acdcpfs <- terra::rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
-    # Select UDs
-    # * (optional) FLAG: modify UDs included in this list
-    uds <- list(ud_path,
-                ud_coa_1, ud_coa_2,
-                ud_rsp_1, ud_rsp_2,
-                ud_acpff, ud_acdcpff,
-                # ud_acpfk, ud_acdcpfk,
-                ud_acpfs, ud_acdcpfs
-    )
+    #### Define simulations for path_realisation_index
+    sims_for_maps <-
+      sims |>
+      filter(n_receiver %in% nr) |>
+      filter(array_realisation == 1L & path_realisation == path_realisation_index) |>
+      arrange(n_receiver, arrangement) |>
+      as.data.table()
 
-    #### Calculate scaling parameter
-    # We will scale UDs (within rows) to a maximum value of 1 for comparison
-    # Scaling is implemented below to ensure correct HR calculation
-    scale <- sapply(uds, \(ud) terra::global(ud, "max")$max) |> max()
-    # uds   <- lapply(uds, \(ud) ud / scale)
-    # sapply(uds, \(ud) terra::global(ud, "max"))
+    #### Set up plot
+    # The figure will be annotated outside of R
+    # (optional) FLAG: adjust width & number of columns for algorithms
+    here_maps <- function(...) here_fig("performance", "maps", ...)
+    dir.create(here_maps(), recursive = TRUE)
+    png(here_maps(png_name(paste0("map-", path_realisation_index))),
+        height = 8, width = 12, units = "in", res = 600)
+    pp <- par(mfrow = c(4, 9),
+              oma = c(0, 0, 0, 0), mar = rep(1, 4))
+    pbapply::pblapply(1:4, function(i) {
 
-    #### Plot UDs for selected array
-    m <- read_array(sim)
-    lapply(uds, function(ud) {
-      # Plot UD (scaled)
-      rescale <- FALSE
-      if (rescale) {
-        sud <- ud / scale
-        range <- c(0, 1)
-      } else {
-        sud <- ud
-        range <- NULL
-      }
-      spatMap(sud, range = range, legend = FALSE, mar = NA)
-      # (optional) Set speed to TRUE to check plot layout only
-      speed <- FALSE
-      if (speed) {
-        spatAxes(ud)
+      #### Read UDs
+      sim        <- sims_for_maps[i, ]
+      if (all(is.na(sim))) {
         return(NULL)
       }
-      # Add home range (based on unscaled UD)
-      map_hr_home(ud, .add = TRUE,
-                  border = "dimgrey", lwd = 0.75)
-      # Plot UD (scaled)
-      # terra::plot(ud)
-      # Add receivers
-      points(m$receiver_easting, m$receiver_northing,
-             pch = 21,
-             bg = scales::alpha("black", 0.75),
-             col = scales::alpha("black", 0.75),
-             cex = 0.5)
-      # Add detection range(s)
-      # * We use a scale bar instead
-      if (FALSE) {
-        cbind(m$receiver_easting, m$receiver_northing) |>
-          terra::vect() |>
-          terra::buffer(width = sim$gamma) |>
-          terra::lines(lwd = 0.5, col = "dimgrey")
+      # list.files(here_alg(sim), recursive = TRUE)
+      ud_path    <- read_rast(here_alg(sim, "path", "ud.tif"))
+      ud_coa_1   <- read_rast(here_alg(sim, "coa", "30 mins", "ud.tif"))
+      ud_coa_2   <- read_rast(here_alg(sim, "coa", "120 mins", "ud.tif"))
+      ud_rsp_1   <- read_rast(here_alg(sim, "rsp", "default", "ud.tif"))
+      ud_rsp_2   <- read_rast(here_alg(sim, "rsp", "custom", "ud.tif"))
+      ud_acpff   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-f.tif"))
+      ud_acdcpff <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-f.tif"))
+      ud_acpfs   <- read_rast(here_alg(sim, "patter", "acpf", sim$alg_par, "ud-s.tif"))
+      ud_acdcpfs <- read_rast(here_alg(sim, "patter", "acdcpf", sim$alg_par, "ud-s.tif"))
+      # Select UDs
+      # * (optional) FLAG: modify UDs included in this list
+      uds <- list(ud_path,
+                  ud_coa_1, ud_coa_2,
+                  ud_rsp_1, ud_rsp_2,
+                  ud_acpff, ud_acdcpff,
+                  ud_acpfs, ud_acdcpfs
+      )
+      if (any(sapply(uds, is.null))) {
+        return(NULL)
       }
-      spatAxes(ud)
-      terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
-      NULL
-    }) |> invisible()
 
-  }) |> invisible()
-  dev.off()
+      #### Calculate scaling parameter
+      # We will scale UDs (within rows) to a maximum value of 1 for comparison
+      # Scaling is implemented below to ensure correct HR calculation
+      scale <- sapply(uds, \(ud) terra::global(ud, "max")$max) |> max()
+      # uds   <- lapply(uds, \(ud) ud / scale)
+      # sapply(uds, \(ud) terra::global(ud, "max"))
+
+      #### Plot UDs for selected array
+      m <- read_array(sim)
+      lapply(uds, function(ud) {
+        # Plot UD (scaled)
+        rescale <- FALSE
+        if (rescale) {
+          sud <- ud / scale
+          range <- c(0, 1)
+        } else {
+          sud <- ud
+          range <- NULL
+        }
+        spatMap(sud, range = range, legend = FALSE, mar = NA)
+        # (optional) Set speed to TRUE to check plot layout only
+        speed <- FALSE
+        if (speed) {
+          spatAxes(ud)
+          return(NULL)
+        }
+        # Add home range (based on unscaled UD)
+        map_hr_home(ud, .add = TRUE,
+                    border = "dimgrey", lwd = 0.75)
+        # Plot UD (scaled)
+        # terra::plot(ud)
+        # Add receivers
+        points(m$receiver_x, m$receiver_y,
+               pch = 21,
+               bg = scales::alpha("black", 0.75),
+               col = scales::alpha("black", 0.75),
+               cex = 0.5)
+        # Add detection range(s)
+        # * We use a scale bar instead
+        if (FALSE) {
+          cbind(m$receiver_x, m$receiver_y) |>
+            terra::vect() |>
+            terra::buffer(width = sim$gamma) |>
+            terra::lines(lwd = 0.5, col = "dimgrey")
+        }
+        spatAxes(ud)
+        terra::sbar(sim$gamma, lonlat = FALSE, col = "darkred")
+        NULL
+      }) |> invisible()
+
+    }) |> invisible()
+    par(pp)
+    dev.off()
+
+  })
+  toc()
 
 }
 

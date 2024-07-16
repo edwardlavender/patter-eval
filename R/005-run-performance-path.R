@@ -17,7 +17,6 @@
 rm(list = ls())
 try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
-options(error = function(...) beepr::beep(7))
 
 #### Essential packages
 library(dv)
@@ -30,17 +29,17 @@ dv::src()
 
 #### Load data
 spatw      <- readRDS(here_input("spatw.rds"))
-im         <- qs::qread(here_input("im.qs"))
 win        <- qs::qread(here_input("win.qs"))
 sims_for_performance    <- readRDS(here_input("sims-performance.rds"))
 sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 
+# spat <- terra::unwrap(spatw)
 
 #########################
 #########################
 #### Estimate UDs
 
-#### Run workflow (~30 s, 10 cl)
+#### Run workflow (~62 s, 10 cl)
 gc()
 tic()
 cl_lapply(sims_for_performance_ls,
@@ -49,7 +48,7 @@ cl_lapply(sims_for_performance_ls,
             print(sim$row)
             workflow_path(sim,
                           spat = .chunkargs$spat,
-                          im = im, win = win)
+                          win = win)
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
@@ -60,9 +59,14 @@ toc()
 
 #### Quick checks
 if (interactive()) {
-  s <- sims_for_performance_ls[[10]]
-  pp <- par(mfrow = c(1, 3))
-  here_alg(s, "path", "ud.tif")  |> terra_qplot()
+  pp <- par(mfrow = c(3, 3))
+  nms <- sample(names(sims_for_performance_ls), 9)
+  for (nm in nms) {
+    s <- sims_for_performance_ls[[nm]]
+    here_alg(s, "path", "ud.tif")  |> terra_qplot()
+    read_path(s) |> select(x, y) |> as.matrix() |> points(pch = ".")
+  }
+  par(pp)
 }
 
 

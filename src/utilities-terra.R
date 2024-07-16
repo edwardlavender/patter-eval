@@ -22,7 +22,7 @@ terra_qplot <- function(file) {
     terra::plot()
 }
 
-#' @title Wrap/unwrap SpatRasters in a list recusively
+#' @title Wrap/unwrap SpatRasters in a list recursively
 
 wrapr <- function(.x) {
   f <- function(.e) {

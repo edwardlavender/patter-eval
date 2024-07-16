@@ -19,14 +19,22 @@ try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
 
 #### Essential packages
+library(collapse)
 library(dv)
 library(patter)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(glue)
+library(JuliaCall)
 library(prettyGraphics)
 library(tictoc)
 dv::src()
+tic()
+
+#### patter
+julia_connect()
+set_seed()
 
 
 #########################
@@ -56,14 +64,13 @@ dir.create(here_data("sims", "output", "synthesis"))
 
 #### Define study site
 # We define a simple rectangular study site
-# * We formerly used a 5 m grid
-# * A 10 m grid is MUCH faster for most routines
-# * And resultant UDs occupy less disk space
-spat <- spatTemplate(.res = sr,
-                     .value = 1,
-                     .xmin = 0, .xmax = 1e4,
-                     .ymin = 0, .ymax = 1e4,
-                     .crs = crs)
+# * Grid resolution affects the speed for some routines
+# * And required disk space
+spat <- terra::rast(vals = 1,
+                    res = sr,
+                    xmin = 0, xmax = 1e4,
+                    ymin = 0, ymax = 1e4,
+                    crs = crs)
 terra::ncell(spat)
 # Define uniform ('blank') SpatRaster
 # (used as a NULL model)
@@ -73,10 +80,12 @@ terra::writeRaster(spat, here_input("blank.tif"), overwrite = TRUE)
 g       <- terra::as.data.frame(spat, xy = TRUE)
 g$depth <- gen_depth(g)
 spat    <- terra::rasterize(as.matrix(g[, c("x", "y")]),
-                           spat,
-                           values = g$depth)
+                            spat,
+                            values = g$depth)
 names(spat) <- "bathy"
 terra::global(terra::cellSize(spat, unit = "km"), "sum")
+# Export map
+set_map(spat)
 # Write SpatRaster(s)
 # * Include wrapped version for parallelised routines
 saveRDS(terra::wrap(spat), here_input("spatw.rds"))
@@ -84,7 +93,7 @@ terra::writeRaster(spat, here_input("spat.tif"), overwrite = TRUE)
 ext <- terra::ext(spat)
 terra::ncell(spat)
 
-#### Define study period
+#### Define study period (`timeline`)
 # Define number of days
 n_days  <- 2
 # Define number of two minute time steps in n_days
@@ -101,7 +110,7 @@ range(period)
 #### Outline simulations
 
 # We will simulate:
-# * one 'study'          (one area, one time series)
+# * one 'study'          (one area, one study period)
 # * n_systems            (different detection probability parameters; n = 2)
 # * n_arrays             (different arrays; n = 20)
 # * n_array_realisations (different realisations; n = 1)
@@ -150,21 +159,22 @@ array_pars <-
   as.data.table()
 
 #### Simulate arrays
-# We simulate n_array designs, as defined by the parameters above (one realisation of each)
+# We simulate a list of n_array designs
+# ... as defined by the parameters above (one realisation of each)
 # We hold array designs constant across different detection probability parameters
 n_array              <- nrow(array_pars)
 n_array_realisations <- 1L
 tic()
-ssf()
 arrays <-
   pbapply::pblapply(split(array_pars, seq_len(nrow(array_pars))), function(d) {
-    a <- sim_array(spat,
-                   .lonlat = FALSE,
+    a <- sim_array(.map = spat,
+                   .timeline = period,
                    .arrangement = d$arrangement,
                    .n_array = n_array_realisations,
                    .n_receiver = d$number,
-                   .receiver_start = min(as.Date(period)),
-                   .receiver_end = max(as.Date(period)),
+                   .receiver_alpha = NULL,
+                   .receiver_beta = NULL,
+                   .receiver_gamma = NULL,
                    .plot = FALSE)
     a$n_receiver  <- d$number
     a$arrangement <- d$arrangement
@@ -181,8 +191,8 @@ coverage <-
     pbapply::pblapply(seq_len(length(arrays)), function(i) {
       # Define detection containers
       containers <- terra::setValues(spat, NA)
-      array    <- arrays[[i]]
-      array[, cell_id := terra::cellFromXY(containers, cbind(receiver_easting, receiver_northing))]
+      array      <- arrays[[i]]
+      array[, cell_id := terra::cellFromXY(containers, cbind(receiver_x, receiver_y))]
       containers[array$cell_id] <- 1
       containers <- terra::buffer(containers, d$gamma)
       containers <- terra::classify(containers, cbind(0, NA))
@@ -248,76 +258,122 @@ n_path              <- nrow(path_pars)
 stopifnot(n_systems == n_path)
 n_path_realisations <- 30L
 origin <- matrix(mean(ext[1:2], mean(ext[3:4])), ncol = 2)
+origin <- data.table(map_value = terra::extract(spat, origin)[1, 1],
+                     x = origin[1], y = origin[2])
 # Simulate paths (~3 s)
 # * One element for each set of parameters
 #   * One data.table for all realisations
 tic()
-ssf()
 paths <- lapply(split(path_pars, seq_len(nrow(path_pars))), function(d) {
+  # Define movement model
+  model_move <-
+    move_xy(dbn_length = glue("truncated(Gamma({d$shape}, {d$scale}),
+                                         upper = {d$mobility})"),
+            dbn_angle = "Uniform(-pi, pi)")
   # Generate paths
-  sim_path_walk(.bathy = spat,
-                .lonlat = FALSE,
-                .origin = origin,
-                .n_step = length(period),
+  sim_path_walk(.map = spat,
+                .timeline = period,
+                .state = "StateXY",
+                .xinit = origin,
+                .model_move = model_move,
                 .n_path = n_path_realisations,
-                .plot = FALSE,
-                .mobility = d$mobility, .shape = d$shape, .scale = d$scale) |>
-    # Add time stamps & simulate depths
-    mutate(timestamp := period[timestep],
-           depth = sim_depth(cell_z)) |>
-    # Redefine path on spat
-    # * This induces a small error
-    # (... spat resolution is high relative to mobility)
-    select(path_id, timestep, timestamp,
-           length, angle,
-           x = cell_x, y = cell_y, depth) |>
+                .plot = FALSE) |>
+    # Simulate depths
+    mutate(depth = sim_depth(map_value)) |>
     as.data.table()
 })
 toc()
 stopifnot(length(unique(paths[[1]]$path_id)) == n_path_realisations)
 saveRDS(paths, here_input("paths.rds"))
 
-#### Validate mobility on grid
-# Confirm that sequential movements on the grid are < mobility
-head(paths[[1]])
-lapply(paths, \(d) range(d$length, na.rm = TRUE))
-lapply(seq_len(length(paths)), \(i) {
-  stopifnot(max(paths[[i]]$length, na.rm = TRUE) < path_pars$mobility[i])
-})
-
 
 #########################
 #########################
-#### Simulate detections
+#### Simulate acoustic observations (0, 1)
 
 #### Overview
-# For each array/path realisation, we simulate detections
+# For each array/path realisation, we simulate acoustic observations
 # This code returns a list:
 # * One element for each set of detection pars & path type
 #   * One element for each array design
-#       * One data.table with detections for all array/path realisation
+#       * One data.table with acoustic observations for all array/path realisations
 
-#### Simulate detections (~33 s)
+#### Simulate acoustic observations (~15 mins)
+# (This is very slow for backward compatibility/historical reasons)
+tic()
 pairs <- CJ(a = seq_len(n_array_realisations),
             p = seq_len(n_path_realisations))
 pairs$key <- paste(pairs$a, pairs$p)
-tic()
-ssf()
-detections <-
+acoustics <-
   pbapply::pblapply(seq_len(n_systems), function(i) {
+
+    # Define detection probability parameters
     d <- detection_pars[i, , drop = FALSE]
-    .paths <- paths[[i]]
-    lapply(seq_len(n_array), function(j) {
-      sim <- sim_detections(.paths = copy(.paths),
-                            .arrays = copy(arrays[[j]]),
-                            .alpha = d$alpha, .beta = d$beta, .gamma = d$gamma,
-                            .type = "combinations",
-                            .return = c("array_id", "path_id",
-                                        "timestamp", "timestep",
-                                        "receiver_id", "receiver_easting", "receiver_northing"))
+
+    # Define path realisations in Julia
+    julia_assign("paths", paths[[i]])
+    julia_code(
+      '
+      # Format paths as matrix
+      np = length(unique(paths.path_id))
+      nt = length(unique(paths.timestep))
+      xout = Matrix{StateXY}(undef, np, nt);
+      for i in 1:nrow(paths)
+        xout[paths.path_id[i], paths.timestep[i]] =
+          StateXY(paths.map_value[i], paths.x[i], paths.y[i])
+      end
+      # Define paths object
+      paths = xout
+      '
+    )
+
+    # Simulate observations for each array
+    pbapply::pblapply(seq_len(n_array), function(j) {
+
+      print(glue("{i} / {n_systems}; {j} / {n_array}"))
+
+      # Define observation model parameter(s)
+      array <-
+        arrays[[j]] |>
+        select("sensor_id" = "receiver_id",
+               "receiver_x", "receiver_y") |>
+        mutate(receiver_alpha = d$alpha,
+               receiver_beta = d$beta,
+               receiver_gamma = d$gamma) |>
+        as.data.table()
+
+      # Simulate observations
+      # > This returns a list with two elements:
+      # * ModelObsDepthUniform (used for checking only)
+      # * ModelObsAcousticLogisTrunc element
+      # > That itself is a list, with one element for each path realisation
+      sim <- sim_observations(.timeline = period,
+                              .model_obs = c("ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"),
+                              .model_obs_pars = list(array,
+                                                     data.table(sensor_id = 1L,
+                                                                depth_shallow_eps = 0L,
+                                                                depth_deep_eps = 0L))
+                              )
+
+      # Check that the list elements are correctly ordered by path ID (yes)
+      check <- sim$ModelObsDepthUniform
+      for (k in seq_len(length(check))) {
+        check[[k]][, path_id := k]
+      }
+      check <- rbindlist(check)
+      stopifnot(all.equal(paths[[i]]$map_value, check$obs))
+
+      # Collate simulated acoustic observations (0, 1)
+      # > We want one data.table with observations for all array/path realisations
+      sim <- sim$ModelObsAcousticLogisTrunc
+      for (k in seq_len(length(sim))) {
+        sim[[k]][, array_id := arrays[[j]]$array_id[1]]
+        sim[[k]][, path_id := k]
+      }
+      sim <- rbindlist(sim)
+      # Check for simulations without detections
       sim$key <- paste(sim$array_id, sim$path_id)
-      if (!all(pairs$key %in% sim$key)) {
-        print(i); print(j)
+      if (!all(pairs$key %in% sim$key[sim$obs > 0L])) {
         print(pairs[!(pairs$key %in% sim$key), ])
         warning("Some keys did not generate detections.",
                 call. = FALSE, immediate. = TRUE)
@@ -332,8 +388,18 @@ toc()
 # We exclude simulations without sufficient observations
 # (see below).
 
-#### Save detections
-saveRDS(detections, here_input("detections.rds"))
+#### Save acoustic observations (0, 1) and detections (0, 1)
+# Save acoustics
+head(acoustics[[1]][[1]])
+qs::qsave(acoustics, here_input("acoustics.qs"))
+# Save detections
+detections <- lapply(acoustics, function(elm) {
+  lapply(elm, function(d) {
+    d[obs == 1L, ]
+  })
+})
+head(detections[[1]][[1]])
+qs::qsave(detections, here_input("detections.qs"))
 
 
 #########################
@@ -344,11 +410,11 @@ saveRDS(detections, here_input("detections.rds"))
 # For each array/path realisation, we will implement the algorithms
 # ... using correct & incorrect parameter values for:
 # * detection parameters (alpha, beta, gamma)
-# * movement parameters  (mobility, shape, scale, [rho], [sigma])
+# * movement parameters  (mobility, shape, scale)
 # * & sufficient/approximate values for algorithm controls (time step lengths, n particles)
 # To do this, we need to build a dataframe with correct & incorrect (or approx) values
 # * We hold each parameter at the right value & change others
-# * We change some combinations of parameters simultaneously
+# * (FALSE) We change some combinations of parameters simultaneously
 # Specific research questions:
 # (1) What happens when we under/overestimate gamma/mobility?
 # ... I.e., can we confirm the results from Lavender et al. (2023)
@@ -361,7 +427,7 @@ saveRDS(detections, here_input("detections.rds"))
 # * One element for each set of detection parameters
 #   * One element for each set of path parameters
 #     * One data.table with all parameter sets
-alg_controls <- data.table(step = 2, n_particles = 1000)
+alg_controls <- data.table(step = 2, n_particles = 10000)
 alg_pars <-
   lapply(seq_len(n_systems), function(i){
 
@@ -377,22 +443,26 @@ alg_pars <-
       #### Change selected parameters while holding others constant
       # * To minimise the number of simulations,
       # ... we (optionally) select a subset of parameters
+      # * We drop 'step' and 'n_particles' for improved speed
       selected_pars <- c("alpha", "beta", "gamma",
-                         "mobility", "shape", "scale",
-                         "step", "n_particles")
+                         "mobility", "shape", "scale") # "step", "n_particles"
       constants <-
         lapply(selected_pars, function(x) {
           # x <- selected_pars[1]
 
           # Define a sequence of parameter values
           vals <- pars[[x]] * c(0.1, 0.5, 1, 1.5, 2)
+
           # For delta t & n_particles, we use selected hard-coded defaults
-          if (x == "step") {
-            vals <- c(2, 4, 8)
-          }
-          if (x == "n_particles") {
-            vals <- c(100, 500, 1000, 2000)
-          }
+          # * This code is no longer required
+
+          # if (x == "step") {
+          #   vals <- c(2, 4, 8)
+          # }
+          # if (x == "n_particles") {
+          #   vals <- c(5000, 10000, 20000)
+          # }
+
           dp <- data.table(x = vals)
           colnames(dp) <- x
           keep <- colnames(pars)[!(colnames(pars) %in% x)]
@@ -405,12 +475,14 @@ alg_pars <-
 
           # For step, we need to update the 'correct' step length parameters
           # (to account for the longer duration)
-          if (x == "step") {
-            for (v in vals) {
-              dp$mobility[i] <- dp$mobility[i] * (dp$step[i] / alg_controls$step)
-              dp$shape[i]    <- dp$shape[i] * (dp$step[i] / alg_controls$step)
-            }
-          }
+          # * This code is no longer required (see above).
+
+          # if (x == "step") {
+          #   for (v in seq_len(length(vals))) {
+          #     dp$mobility[v] <- dp$mobility[v] * (dp$step[v] / alg_controls$step)
+          #     dp$shape[v]    <- dp$shape[v] * (dp$step[v] / alg_controls$step)
+          #   }
+          # }
 
           # Return dp
           dp
@@ -420,23 +492,28 @@ alg_pars <-
 
       #### Change gamma and mobility simultaneously
       # (while holding other parameters constant)
-      gm <- CJ(gamma = unique(constants$gamma),
-               mobility = unique(constants$mobility))
-      keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
-      gm <- cbind(gm, pars[, ..keep])
-      gm$flag <- "gm"
+      # * For speed, this code is no longer implemented.
+
+      # gm <- CJ(gamma = unique(constants$gamma),
+      #          mobility = unique(constants$mobility))
+      # keep <- colnames(pars)[!(colnames(pars) %in% c("gamma", "mobility"))]
+      # gm <- cbind(gm, pars[, ..keep])
+      # gm$flag <- "gm"
 
       #### Change beta and shape simultaneously
       # (while holding other parameters constant)
-      bs <- CJ(beta = unique(constants$beta),
-                        shape = unique(constants$shape))
-      keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
-      bs <- cbind(bs, pars[, ..keep])
-      bs$flag  <- "bs"
+      # * For speed, this code is no longer implemented.
+
+      # bs <- CJ(beta = unique(constants$beta),
+      #                   shape = unique(constants$shape))
+      # keep <- colnames(pars)[!(colnames(pars) %in% c("beta", "shape"))]
+      # bs <- cbind(bs, pars[, ..keep])
+      # bs$flag  <- "bs"
 
       #### Define all unique parameter sets
       sets <-
-        rbind(pars, constants, gm, bs) |>
+        rbind(pars, constants) |>
+        # rbind(pars, constants, gm, bs) |>
         distinct() |>
         mutate(alg_par = row_number(),
                system_type = i,
@@ -490,6 +567,8 @@ nrow(sims)
 alg_pars_dt <-
   alg_pars |>
   rbindlist() |>
+  # We now use hard-coded defaults for step and n_particles
+  mutate(step = 2, n_particles = 1e4L) |>
   select(system_type, path_type, alg_par,
          alpha, beta, gamma,
          mobility, shape, scale,
@@ -538,16 +617,18 @@ stopifnot(length(which(sims$performance)) ==
 # * Select 10 array designs for this analysis
 # * This helps to minimise the number of simulations
 # * (And we can't plot more results easily anyway)
-nr <- sort(unique(array_pars$number))
-nr <- nr[seq(1, length(nr), by = 10)]
-pos <- which(!sims$performance & sims$flag == "gm" & !(sims$n_receiver %in% nr))
-if (length(pos) > 0) {
-  sims <- sims[-pos, ]
-}
-pos <- which(!sims$performance & sims$flag == "bs" & !(sims$n_receiver %in% nr))
-if (length(pos) > 0) {
-  sims <- sims[-pos, ]
-}
+# * This code is no longer required (see above).
+
+# nr <- sort(unique(array_pars$number))
+# nr <- nr[seq(1, length(nr), by = 10)]
+# pos <- which(!sims$performance & sims$flag == "gm" & !(sims$n_receiver %in% nr))
+# if (length(pos) > 0) {
+#   sims <- sims[-pos, ]
+# }
+# pos <- which(!sims$performance & sims$flag == "bs" & !(sims$n_receiver %in% nr))
+# if (length(pos) > 0) {
+#   sims <- sims[-pos, ]
+# }
 
 #### Exclude simulations with insufficient detections (~37 s)
 # Count the number of detections for each simulation
@@ -558,27 +639,15 @@ for (i in seq_len(n)) {
   svMisc::progress(i, n)
   sims$count[i] <-
     detections[[sims$system_type[i]]][[sims$array_type[i]]][
-    array_id == sims$array_realisation[i] & path_id == sims$path_realisation[i], ] |>
-    nrow()
+    array_id == sims$array_realisation[i] & path_id == sims$path_realisation[i] & obs == 1L, ] |>
+    fnrow()
 }
 toc()
 hist(sims$count, breaks = 100)
 # Drop simulations with insufficient detections
-n; nrow(sims[sims$count > 5L, ])
-sims <- sims[sims$count > 5L, ]
+n; nrow(sims[sims$count > 10L, ])
+sims <- sims[sims$count > 10L, ]
 range(sims$count)
-
-#### Update selected parameters as necessary
-# We account for mobility/grid resolution in the algorithms as follows:
-# * In the forward simulation:
-# - In pf_rpropose_kick(), we permit kicks up to length mobility
-# - In directed sampling, we identify cells within a distance of mobility + sr
-# - In pf_dpropose(), we therefore permit mobility + sr
-# * In the backward sampler:
-# - In spatDens() we identify cells within a distance of mobility + sr
-# - & in density calculations, permit mobility + sr
-# * This ensures that particles generated by kicks, when coerced onto the grid
-# * for density calculations, are always valid (i.e., within mobility).
 
 #### Define IDs
 sims$id <- seq_len(nrow(sims))
@@ -586,10 +655,13 @@ head(sims)
 nrow(sims)
 
 #### Save sims
-length(which(sims$performance)) # 1193
-nrow(sims)                      # 39516
+length(which(sims$performance)) # 1181
+nrow(sims)                      # 29525
 saveRDS(sims, here_input("sims.rds"))
 
+
+toc()
+# 18 mins
 
 #### End of code.
 #########################

@@ -17,7 +17,6 @@
 rm(list = ls())
 try(pacman::p_unload("all"), silent = TRUE)
 dv::clear()
-options(error = function(...) beepr::beep(7))
 
 #### Essential packages
 library(dv)
@@ -30,8 +29,8 @@ dv::src()
 
 # Validate gdistance for RSP
 library(gdistance)
-Sys.sleep(60)
-library(gdistance)
+# Sys.sleep(60)
+# library(gdistance)
 
 #### Load data
 spatw        <- readRDS(here_input("spatw.rds"))
@@ -48,32 +47,35 @@ sims_for_performance_ls <- split(sims_for_performance, sims_for_performance$id)
 #### (optional) Test
 test <- FALSE
 if (test) {
-  cl <- 1L
-  sims_for_performance_ls <- sims_for_performance_ls[1:2]
+  cl <- 11L
+  sims_for_performance_ls <- sims_for_performance_ls[1:100]
 } else {
-  cl <- 50L
+  cl <- 11L
 }
+# Time trial (100 rows, 10 cl): 41 mins
+# ETA (1181 rows, 10 cl)      : 8 hours (41 * 1181/100 / 60)
+# Result (1181 rows, 11 cl)   : 3.5 hours
 
-#### Run workflow (~13 h on one cl)
+#### Run workflow
 gc()
 tic()
 success <-
   cl_lapply(sims_for_performance_ls,
           .fun = function(sim, .chunkargs) {
             # sim <- sims_for_performance_ls[[1]]
-            print(sim$row)
-            tic()
+            # print(sim$row)
+            # tic()
             success <- workflow_rsp(sim = sim,
                                     spat = .chunkargs$spat,
                                     spat_ll_dbb = .chunkargs$spat_ll_dbb,
                                     tm = tm)
-            toc()
+            # toc()
             success
           },
           .chunk = TRUE,
           .chunk_fun = function(sim) {
             .chunkargs <- list(spat = terra::unwrap(spatw),
-                 spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
+                               spat_ll_dbb = terra::unwrap(spat_ll_dbbw))
             .chunkargs
           },
           .cl = cl)
@@ -86,7 +88,7 @@ saveRDS(sdt, here_data("sims", "output", "success", "rsp.rds"))
 
 #### Quick checks
 if (interactive()) {
-  s <- sims_for_performance_ls[[1]]
+  s <- sims_for_performance_ls[[101]]
   pp <- par(mfrow = c(2, 3))
   here_alg(s, "path", "ud.tif")  |> terra_qplot()
   here_alg(s, "coa", "30 mins", "ud.tif") |> terra_qplot()
@@ -94,10 +96,9 @@ if (interactive()) {
   here_alg(s, "rsp", "default", "ud.tif") |> terra_qplot()
   here_alg(s, "rsp", "custom", "ud.tif") |> terra_qplot()
   m <- read_array(s)
-  points(m$receiver_easting, m$receiver_northing)
+  points(m$receiver_x, m$receiver_y)
   par(pp)
 }
-
 
 
 #### End of code.

@@ -14,6 +14,24 @@ read_acoustics <- function(sim) {
     qs::qread()
 }
 
+read_detections <- function(sim) {
+  here_input("acoustics",
+             sim$combination,
+             sim$array_type, sim$array_realisation,
+             sim$path_realisation,
+             "detections.qs") |>
+    qs::qread()
+}
+
+read_archival <- function(sim) {
+  here_input("archival",
+             sim$combination,
+             sim$array_type, sim$array_realisation,
+             sim$path_realisation,
+             "archival.qs") |>
+    qs::qread()
+}
+
 read_path <- function(sim) {
   here_input("paths",
              sim$combination,
@@ -21,28 +39,6 @@ read_path <- function(sim) {
              sim$path_realisation,
              "path.qs") |>
     qs::qread()
-}
-
-read_dlist <- function(sim) {
-  here_input("dlist",
-             sim$combination,
-             sim$array_type, sim$array_realisation,
-             sim$path_realisation,
-             sim$gamma,
-             "dlist.qs") |>
-    qs::qread()
-}
-
-read_overlaps <- function(sim) {
-  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma, "overlaps.qs") |>
-    qs::qread()
-}
-
-read_kernels <- function(sim) {
-  here_input("ac", sim$array_type, sim$array_realisation, sim$gamma,
-             sim$alpha, sim$beta, "kernels.qs") |>
-    qs::qread() |>
-    unwrapr()
 }
 
 read_actel <- function(sim) {
