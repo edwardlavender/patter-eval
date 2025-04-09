@@ -86,7 +86,7 @@ Follow the steps described below to clone the project and reproduce the workflow
 
 # Citation
 
-Lavender, E. et al. (in prep). Particle algorithms for animal movement modelling in autonomous receiver networks.
+Lavender, E. et al. (2025). Particle algorithms for animal movement modelling in receiver arrays. Methods in Ecology and Evolution, 00,  1–12. https://doi.org/10.1111/2041-210X.70028
 
 # Code of conduct
 
